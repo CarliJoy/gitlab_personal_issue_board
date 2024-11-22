@@ -9,26 +9,46 @@ class SortableColumn(ui.element, component='sortable_column.js', default_classes
 
     def __init__(self, name: str, *, on_change: Optional[Callable] = None, group:str = None) -> None:
         super().__init__()
+        self.name = name
         with self.classes('bg-blue-grey-2 w-60 p-4 rounded shadow-2'):
             ui.label(name).classes('text-bold ml-1')
         self.on('item-drop', self.drop)
-        # self.on('drop', self.ddrop)
         self.on_change = on_change
         self._items: list[int] = []
         self._props['group'] = group
 
+    def update_position(self, element_id: int, new_place: int, new_list: int):
+        """
+        Correct the position of element_id within new_list in new_place
+        """
+
+        element = self.client.elements[element_id]
+
+        # Remove the element from the current position
+        self.default_slot.children.remove(element)
+
+        if new_list == self.id:
+            # Insert the element into the new position
+            self.default_slot.children.insert(new_place, element)
+        else:
+            # Move the dragged element to new outer element
+            target = self.client.elements[new_list]
+            element.parent_slot = target.default_slot
+            target.default_slot.children.insert(new_place, element)
+            target.update()
+
+        # Trigger re-rendering of the UI
+        self.update()
+
     async def drop(self, e) -> None:
+        element_id = e.args["id"]
+        new_index = e.args["new_index"]
+        new_list = e.args["new_list"]
+        self.update_position(element_id, new_index, new_list)
         if self.on_change:
-            await self.on_change(self, e, self.client.elements[e.args["id"]])
+            self.on_change(self, self.client.elements[new_list], self.client.elements[element_id], new_index)
         else:
             print(e)
-
-    async def ddrop(self, e) -> None:
-        print(e)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._items = [item.id  for item in self.default_slot.children  if isinstance(item, MoveableCard)]
-        super().__exit__(exc_type, exc_val, exc_tb)
 
 class MoveableCard(ui.card):
     def __init__(self, name: str, *args, **kwargs) -> None:
@@ -39,10 +59,8 @@ class MoveableCard(ui.card):
             ui.label(name)
 
 
-async def on_change(col: SortableColumn, e: GenericEventArguments, card: MoveableCard):
-    print(f"Moved {card.name}")
-    print(e)
-    pprint(e.args)
+def on_change(source: SortableColumn, target: SortableColumn, card: MoveableCard, index: int) -> None:
+    print(f"Moved {card.name} in {source.name} to {target.name} ({index})")
 
 def refresh():
     draw.refresh()
