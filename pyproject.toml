@@ -1,0 +1,100 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gitlab-personal-issue-board"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Carli* Freudenberg", email = "carli.freudenberg@energymeteo.de" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "nicegui>=2.9.0",
+  "python-gitlab>=5.2.0"
+]
+[dependency-groups]
+lint = [
+    "ruff",
+    "mypy",
+]
+test = [
+    "coverage[toml]",
+    "hypothesis",
+    "pytest-cov",
+    "pytest",
+]
+dev = [
+    {include-group = "lint"},
+    {include-group = "test"},
+]
+
+
+[project.urls]
+Documentation = "https://github.com/carlijoy/gitlab-personal-issue-board#readme"
+Issues = "https://github.com/carlijoy/gitlab-personal-issue-board/issues"
+Source = "https://github.com/carlijoy/gitlab-personal-issue-board"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/gitlab_personal_issue_board tests}"
+
+[tool.coverage.run]
+source_pkgs = ["gitlab_personal_issue_board", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/gitlab_personal_issue_board/__about__.py",
+]
+
+[tool.coverage.paths]
+gitlab_personal_issue_board = ["src/gitlab_personal_issue_board", "*/gitlab-personal-issue-board/src/gitlab_personal_issue_board"]
+tests = ["tests", "*/gitlab-personal-issue-board/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+
+[tool.ruff]
+line-length = 88
+src = ["src"]
+
+[tool.ruff.lint]
+select = [  # see: https://beta.ruff.rs/docs/rules/
+    "F",  # pyflakes
+    "E",  # pycodestyle error
+    "W",  # pycodestyle warning
+    "C90",  # mccabe
+    "I",  # isort
+    "D",  # pydocstyle
+    "S",  # bandit
+    "B",  # bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "RUF",  # Ruff-specific
+]
+
+[tool.ruff.format]
+docstring-code-format = true  # Enable reformatting of code snippets in docstrings.
+line-ending = "lf"  # Use `\n` line endings for all files

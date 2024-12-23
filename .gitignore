@@ -1,1 +1,49 @@
-.venv
+# Temp files and caches
+*.egg-info/
+*.log
+*.pyc
+*.pyd
+*.pyo
+.DS_Store
+.cache/
+.coverage
+.coverage.*
+.dmypy.json
+.hypothesis/
+.mypy_cache/
+.pytest_cache/
+.tox/
+MANIFEST
+__pycache__/
+
+# Editor files
+*.swp
+*~
+.idea/
+.project
+.pydevproject
+.ropeproject
+.settings
+.vscode/
+
+# Generated Files
+*.so
+artifacts/
+build/
+coverage-report.xml
+dist/
+docs/_build/
+docs/_rst/
+docs/_static/assets/
+docs/api/
+gl-code-quality-report.json
+htmlcov/
+lint-stats.json
+public/
+pytest-report.xml
+test-stats.json
+tests/test__emsconda_auto_generated.py
+
+# Per-project virtualenvs
+.conda*/
+.venv*/
