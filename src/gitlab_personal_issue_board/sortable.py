@@ -1,3 +1,10 @@
+"""
+Sortable column using sortable.js.
+
+based on https://github.com/itworkedlastime/nicegui-sortable-column
+and https://github.com/zauberzeug/nicegui/discussions/3830#discussioncomment-10963832
+"""
+
 import contextlib
 from collections.abc import Generator, Iterable
 from typing import Final, Literal, Protocol
