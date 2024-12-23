@@ -1,3 +1,5 @@
+import contextlib
+from collections.abc import Generator, Iterable
 from typing import Final, Literal, Protocol
 
 from nicegui import events, ui
@@ -16,9 +18,7 @@ class OnChange(Protocol):
     ) -> None: ...
 
 
-class SortableColumn(
-    ui.element, component="sortable_column.js", default_classes="nicegui-column"
-):
+class SortableColumn(ui.element, component="sortable_column.js"):
     def __init__(
         self,
         name: str,
@@ -28,8 +28,6 @@ class SortableColumn(
     ) -> None:
         super().__init__()
         self.name = name
-        with self.classes("bg-blue-grey-2 w-60 p-4 rounded shadow-2"):
-            ui.label(name).classes("text-bold ml-1")
         self.on("item-drop", self.drop)
         self.on_change = on_change
         self._items: list[int] = []
@@ -70,8 +68,29 @@ class SortableColumn(
         else:
             print(e)
 
+    def cards(self) -> Iterable["MoveableCard"]:
+        for element in self.default_slot.children:
+            if isinstance(element, MoveableCard):
+                yield element
+
     def __str__(self) -> str:
         return self.name
+
+
+@contextlib.contextmanager
+def sortable_column(
+    name: str, on_change: OnChange | None = None, group: str = DEFAULT_GROUP
+) -> Generator[tuple[ui.column, SortableColumn], None, None]:
+    with ui.column(wrap=True).classes(
+        "bg-blue-grey-2 w-60 p-4 rounded shadow-2"
+    ) as outer_column:
+        ui.label(name).classes("text-bold ml-1")
+
+        with SortableColumn(name, on_change=on_change, group=group) as column:
+            column.classes("p-4 w-60")
+            yield outer_column, column
+
+        ui.label(str(column.id))
 
 
 class MoveableCard(ui.card):
@@ -89,11 +108,8 @@ class MoveableCard(ui.card):
         with self:
             ui.label(name)
 
-
-def on_change(
-    source: SortableColumn, target: ui.element, card: ui.element, index: int
-) -> None:
-    print(f"Moved {card} in {source} to {target} ({index})")
+    def __str__(self) -> str:
+        return self.name
 
 
 def refresh() -> None:
@@ -103,21 +119,33 @@ def refresh() -> None:
 @ui.refreshable
 def draw() -> None:
     ui.button("reset").on_click(refresh)
+
+    def on_change(
+        source: SortableColumn, target: ui.element, card: ui.element, index: int
+    ) -> None:
+        print(f"Moved {card} in {source} to {target} ({index})")
+        update_label()
+
+    c1: SortableColumn
+    c2: SortableColumn
+
     with ui.row():
-        with SortableColumn("1er", on_change=on_change, group="test") as c1:
+        with sortable_column("1er", on_change=on_change) as (_, c1):
             for i in range(10):
                 MoveableCard(f"Card {i}")
 
-            with ui.card():
-                ui.label("Fixed Card")
-            ui.label(str(c1.id))
-
-        with SortableColumn("10er", on_change=on_change, group="test") as c2:
+        with sortable_column("10er", on_change=on_change) as (_, c2):
             for i in range(10):
                 MoveableCard(f"Card {i}0")
-            with ui.card():
-                ui.label("Fixed Card")
-            ui.label(str(c2.id))
+
+    c1_label = ui.label("1er:")
+    c2_label = ui.label("10er:")
+
+    def update_label() -> None:
+        c1_label.text = f"1er: {", ".join(f"'{card}'" for card in c1.cards())}"
+        c2_label.text = f"10er: {", ".join(f"'{card}'" for card in c2.cards())}"
+
+    update_label()
 
 
 def run() -> None:
