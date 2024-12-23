@@ -24,27 +24,29 @@ dependencies = [
   "nicegui>=2.9.0",
   "python-gitlab>=5.2.0"
 ]
+
+# https://peps.python.org/pep-0735/
 [dependency-groups]
-lint = [
-    "ruff",
-    "mypy",
-]
+lint = ["mypy"]
 test = [
     "coverage[toml]",
     "hypothesis",
     "pytest-cov",
     "pytest",
 ]
+# this is the default grup used by uv
 dev = [
     {include-group = "lint"},
     {include-group = "test"},
 ]
 
-
 [project.urls]
 Documentation = "https://github.com/carlijoy/gitlab-personal-issue-board#readme"
 Issues = "https://github.com/carlijoy/gitlab-personal-issue-board/issues"
 Source = "https://github.com/carlijoy/gitlab-personal-issue-board"
+
+[tool.hatch.envs.default]
+installer = "uv"
 
 [tool.hatch.version]
 source = "vcs"
@@ -95,6 +97,29 @@ select = [  # see: https://beta.ruff.rs/docs/rules/
     "RUF",  # Ruff-specific
 ]
 
+ignore = [
+    "S101",  # assert needed in tests, useful in src for documenting invariants
+    # Docstyle is a bit too strict:
+    "D107",  # I never document __init__()
+    "D203", # no blank line before class
+    "D102",
+    "D105",  # I don't always write docstrings for __ meths, esp. for __str__.
+    "D200",  # Allow putting the """ in separate lines in one-line docstrings
+    "D205",  # Allow the first line spanning another line.
+    "D212",  # Allow putting the """ in separate lines in multi-line docstrings
+    # Don't force docstrings on classes and functions at the momemnt, we are still prototyping
+    # TODO: remove once we have a proper package
+    "D100",
+    "D101",
+    "D103",
+    "D104",
+]
+
+
 [tool.ruff.format]
 docstring-code-format = true  # Enable reformatting of code snippets in docstrings.
 line-ending = "lf"  # Use `\n` line endings for all files
+
+[tool.mypy]
+disallow_untyped_defs = true
+strict = true
