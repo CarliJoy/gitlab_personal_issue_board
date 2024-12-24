@@ -290,11 +290,16 @@ wheels = [
 
 [[package]]
 name = "gitlab-personal-issue-board"
-version = "0.1.dev3+gf3a80f6.d20241223"
+version = "0.1.dev7+g34a447a.d20241224"
 source = { editable = "." }
 dependencies = [
+    { name = "attrs" },
     { name = "nicegui" },
+    { name = "orjson" },
+    { name = "platformdirs" },
+    { name = "pydantic" },
     { name = "python-gitlab" },
+    { name = "typed-settings" },
 ]
 
 [package.dev-dependencies]
@@ -317,8 +322,13 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "attrs", specifier = ">=24.3.0" },
     { name = "nicegui", specifier = ">=2.9.0" },
+    { name = "orjson", specifier = ">=3.10.7" },
+    { name = "platformdirs", specifier = ">=4.3.6" },
+    { name = "pydantic", specifier = ">=2.9.2" },
     { name = "python-gitlab", specifier = ">=5.2.0" },
+    { name = "typed-settings", specifier = ">=24.6.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -646,6 +656,15 @@ wheels = [
 ]
 
 [[package]]
+name = "platformdirs"
+version = "4.3.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/fc/128cc9cb8f03208bdbf93d3aa862e16d376844a14f9a0ce5cf4507372de4/platformdirs-4.3.6.tar.gz", hash = "sha256:357fb2acbc885b0419afd3ce3ed34564c13c9b95c89360cd9563f73aa5e2b907", size = 21302 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3c/a6/bc1012356d8ece4d66dd75c4b9fc6c1f6650ddd5991e421177d9f8f671be/platformdirs-4.3.6-py3-none-any.whl", hash = "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb", size = 18439 },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -948,6 +967,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1a/4c/9b5764bd22eec91c4039ef4c55334e9187085da2d8a2df7bd570869aae18/starlette-0.41.3.tar.gz", hash = "sha256:0e4ab3d16522a255be6b28260b938eae2482f98ce5cc934cb08dce8dc3ba5835", size = 2574159 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/00/2b325970b3060c7cecebab6d295afe763365822b1306a12eeab198f74323/starlette-0.41.3-py3-none-any.whl", hash = "sha256:44cedb2b7c77a9de33a8b74b2b90e9f50d11fcf25d8270ea525ad71a25374ff7", size = 73225 },
+]
+
+[[package]]
+name = "typed-settings"
+version = "24.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/91/f39cff1a6eb43ba5d8e7eb810405b0a7abed7b7033f7725a09796c625547/typed_settings-24.6.0.tar.gz", hash = "sha256:9a5595de33f80452a2038e018bc45508fffc238a8752f08f5c03dc8e7bc0d1e2", size = 29469194 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/65/659c1bebd863edc9184715fd1cf2475926cead71d83535d980577bfa2439/typed_settings-24.6.0-py3-none-any.whl", hash = "sha256:22221598a821395700beaafd8eab0e1bc596b394767aa37e0926c5f74d0b6a62", size = 58394 },
 ]
 
 [[package]]
