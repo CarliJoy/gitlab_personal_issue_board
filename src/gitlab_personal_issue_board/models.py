@@ -1,7 +1,8 @@
+import uuid
 from datetime import datetime
 from typing import Literal, NewType
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 IssueID = NewType("IssueID", int)
 UserID = NewType("UserID", int)
@@ -44,3 +45,19 @@ class Issue(BaseModel):
     web_url: str
     state: Literal["opened", "closed"]
     due_at: datetime | None = None
+
+
+class CardDefinition(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    label: Label | Literal["opened", "closed"]
+
+
+class Card(CardDefinition):
+    issues: tuple[IssueID, ...]
+
+
+class Board(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    model_config = ConfigDict(frozen=True)
+    name: str
+    cards: tuple[Card, ...]
