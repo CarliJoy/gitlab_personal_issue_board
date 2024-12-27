@@ -88,10 +88,12 @@ class LabelCard(BaseModel):
         See *filter_issues_by_label*
         """
         if isinstance(self.label, Label):
-            return any(label.name == self.label.name for label in issue.labels)
-        elif self.label == "closed":
-            return issue.state == "opened" and issue.id not in distributed_issues
+            return issue.state != "closed" and any(
+                label.name == self.label.name for label in issue.labels
+            )
         elif self.label == "opened":
+            return issue.state == "opened" and issue.id not in distributed_issues
+        elif self.label == "closed":
             return issue.state == "closed"
         else:  # pragma: no cover
             assert_never(issue.state)
