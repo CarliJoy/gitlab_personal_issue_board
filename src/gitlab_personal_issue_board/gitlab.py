@@ -10,7 +10,7 @@ import gitlab
 
 from . import settings
 from .caching import IssueCacheDict
-from .models import Issue, IssueID, User
+from .models import Issue, IssueID, Label, User
 
 
 @functools.cache
@@ -50,6 +50,26 @@ class Issues:
         # currently this is the time the last issues was updated.
         # TODO: Change it to the last time refresh was executed
         self._last_updated = self._cache.last_updated
+
+    def assign_new_labels(
+        self, issue: Issue | IssueID, new_label: Label, old_labels: Iterable[Label]
+    ) -> None:
+        """
+        Assign *issue* with *new_label* while removing *old_labels*
+        """
+        if isinstance(issue, Issue):
+            issue_id = issue.id
+        else:
+            issue_id = issue
+
+        gl_issue = self._gl.issues.get(issue_id)
+        old_label_names = {label.name for label in old_labels}
+        new_labels = (set(gl_issue.labels) - old_label_names) | {new_label.name}
+        gl_issue.labels = sorted(new_labels)
+        gl_issue.save()
+
+    def __getitem__(self, item: IssueID) -> Issue:
+        return self._cache[item]
 
     def values(self) -> Iterable[Issue]:
         yield from self._cache.values()

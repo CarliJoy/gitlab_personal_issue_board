@@ -7,12 +7,13 @@ and https://github.com/zauberzeug/nicegui/discussions/3830#discussioncomment-109
 
 import contextlib
 from collections.abc import Generator, Iterable
-from typing import Final, Literal, Protocol
+from typing import Final, Literal, Protocol, TypeVar
 
 from nicegui import events, ui
 
 DROP_HANDLE: Final[str] = "drop_handle"
 DEFAULT_GROUP: Final[str] = "default_sortable_group"
+T = TypeVar("T", bound=ui.element)
 
 
 class OnChange(Protocol):
@@ -44,6 +45,8 @@ class SortableColumn(ui.element, component="sortable_column.js"):
         """Correct the position of element_id within new_list in new_place."""
         element = self.client.elements[element_id]
 
+        # TODO: use element.move()
+
         # Remove the element from the current position
         self.default_slot.children.remove(element)
 
@@ -72,12 +75,10 @@ class SortableColumn(ui.element, component="sortable_column.js"):
                 self.client.elements[element_id],
                 new_index,
             )
-        else:
-            print(e)
 
-    def cards(self) -> Iterable["MoveableCard"]:
+    def cards(self, typ: type[T]) -> Iterable[T]:
         for element in self.default_slot.children:
-            if isinstance(element, MoveableCard):
+            if isinstance(element, typ):
                 yield element
 
     def __str__(self) -> str:
@@ -87,17 +88,18 @@ class SortableColumn(ui.element, component="sortable_column.js"):
 class MoveableCard(ui.card):
     def __init__(
         self,
-        name: str,
+        name: str | None = None,
         align_items: Literal["start", "end", "center", "baseline", "stretch"]
         | None = None,
         *args: object,
         **kwargs: object,
     ) -> None:
         super().__init__(*args, align_items=align_items, **kwargs)
-        self.name: str = name
+        self.name: str = name or ""
         self._classes.append(DROP_HANDLE)
-        with self:
-            ui.label(name)
+        if name is not None:
+            with self:
+                ui.label(name)
 
     def __str__(self) -> str:
         return self.name
@@ -151,8 +153,12 @@ class SortableExample:
         c2_label = ui.label("10er:")
 
         def update_label() -> None:
-            c1_label.text = f"1er: {", ".join(f"'{card}'" for card in c1.cards())}"
-            c2_label.text = f"10er: {", ".join(f"'{card}'" for card in c2.cards())}"
+            c1_label.text = (
+                f"1er: {", ".join(f"'{card}'" for card in c1.cards(MoveableCard))}"
+            )
+            c2_label.text = (
+                f"10er: {", ".join(f"'{card}'" for card in c2.cards(MoveableCard))}"
+            )
 
         update_label()
 

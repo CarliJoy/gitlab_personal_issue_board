@@ -18,6 +18,15 @@ def cache_dir() -> Path:
     return result
 
 
+def data_dir() -> Path:
+    """
+    Path to data directory (existence is ensured)
+    """
+    result = Path(platformdirs.user_data_dir(APP_NAME))
+    result.mkdir(parents=True, exist_ok=True)
+    return result
+
+
 @attrs.frozen
 class GitlabSettings:
     config_section: str | None = None

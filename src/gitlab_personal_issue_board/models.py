@@ -10,6 +10,7 @@ from .model_validators import uniq, validate_label_cards
 
 IssueID = NewType("IssueID", int)
 UserID = NewType("UserID", int)
+LabelBoardID = NewType("LabelBoardID", str)
 
 
 class User(BaseModel):
@@ -144,9 +145,12 @@ class LabelBoard(BaseModel):
     """
 
     model_config = ConfigDict(frozen=True)
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: LabelBoardID = Field(default_factory=lambda: LabelBoardID(str(uuid.uuid4())))
     name: str
     cards: Annotated[tuple[LabelCard, ...], AfterValidator(validate_label_cards)]
+
+    def evolve(self, *cards: LabelCard) -> "LabelBoard":
+        return LabelBoard(id=self.id, name=self.name, cards=cards)
 
 
 if TYPE_CHECKING:
