@@ -57,7 +57,7 @@ def main() -> None:
     issues = gitlab.Issues()
     board = boards.load_label_board(BOARD_ID)
     view_model.LabelBoard(board, issues=issues)
-    # ver 2
+    # ver 21
     ui.run()
 
 

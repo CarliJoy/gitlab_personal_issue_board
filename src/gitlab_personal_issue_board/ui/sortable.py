@@ -35,6 +35,9 @@ class SortableColumn(ui.element, component="sortable_column.js"):
         group: str = DEFAULT_GROUP,
     ) -> None:
         super().__init__()
+        self.classes.append("row")
+        self.classes.append("nicegui-row")
+        self.classes.append("no-wrapped")
         self.name = name
         self.on("item-drop", self.drop)
         self.on_change = on_change

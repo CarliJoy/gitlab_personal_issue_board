@@ -53,7 +53,8 @@ class LabelColumnOuter(ui.column):
     def __init__(self, card: models.LabelCard, parent_board: "LabelBoard") -> None:
         self.card = card
         self.parent_board = parent_board
-        super().__init__(wrap=True)
+        super().__init__(wrap=False)
+        self.tailwind.width("96")
 
         with self.classes("bg-blue-grey-2 w-60 p-4 rounded shadow-2"):
             if card.label == "opened":
@@ -83,6 +84,12 @@ class LabelColumnInner(sortable.SortableColumn):
         super().__init__(name=str(self.card))
 
         with self:
+            # self.tailwind.width("fit")
+            # self.tailwind.height("max")
+            # with ui.scroll_area() as area:
+            #     area.tailwind.space_between("y-2")
+            #     area.tailwind.width("fit")
+            #     area.tailwind.height("max")
             for issue_id in self.card.issues:
                 issue_card = LabelIssueCard(self.parent_board.issues[issue_id])
                 self.parent_board.issue_cards[issue_card.id] = issue_card
@@ -111,7 +118,7 @@ class LabelBoard(ui.row):
     issue_cards: dict[ElementID, LabelIssueCard]
 
     def __init__(self, board: models.LabelBoard, issues: gitlab.Issues) -> None:
-        super().__init__()
+        super().__init__(wrap=False)
         sorted_cards = controller.sort_issues_in_cards_by_label(
             tuple(issues.values()), board.cards
         )
