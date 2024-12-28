@@ -14,10 +14,37 @@ from .ui import sortable
 type ElementID = int
 
 
+class LabelView(ui.html):
+    _tooltip: ui.tooltip
+
+    def __init__(self, label: models.Label) -> None:
+        super().__init__(label.name)
+        self.label = label
+        self.classes.append("rounded-full")
+        with self:
+            self._tooltip = ui.tooltip(label.description or "")
+        self.update_properties()
+
+    def update_properties(self) -> None:
+        self.style["background-color"] = self.label.color
+        self.style["color"] = self.label.text_color
+        self.content = self.label.name
+        self._tooltip.text = self.label.description or ""
+
+
 class LabelIssueCard(sortable.MoveableCard):
     def __init__(self, issue: models.Issue) -> None:
         super().__init__()
         self.issue = issue
+
+        with self:
+            self.header = ui.link(issue.title, issue.web_url)
+            with ui.row() as label_row:
+                self.label_row = label_row
+                self.label_row_elements = tuple(
+                    LabelView(label) for label in issue.labels
+                )
+            self.reference = ui.label(issue.references.full)
 
 
 class LabelColumnOuter(ui.column):
@@ -29,11 +56,13 @@ class LabelColumnOuter(ui.column):
         super().__init__(wrap=True)
 
         with self.classes("bg-blue-grey-2 w-60 p-4 rounded shadow-2"):
-            ui.label(str(card)).classes("text-bold ml-1")
+            if card.label == "opened":
+                self.header = ui.html("Opened")
+            elif card.label == "closed":
+                self.header = ui.html("Closed")
+            else:
+                self.header = LabelView(card.label)
             self.inner = LabelColumnInner(self)
-
-    def refresh_card_by_ui(self) -> None:
-        self.inner.refresh_card_by_ui()
 
 
 class LabelColumnInner(sortable.SortableColumn):
@@ -64,7 +93,7 @@ class LabelColumnInner(sortable.SortableColumn):
         super().update_position(element_id, new_place, new_list)
         self.refresh_card_by_ui()
         if self.id != new_list:
-            self.parent_board.cards[new_list].refresh_card_by_ui()
+            self.parent_board.inner_cards[new_list].refresh_card_by_ui()
         self.parent_board.update_and_save()
 
     def refresh_card_by_ui(self) -> None:
@@ -76,6 +105,7 @@ class LabelColumnInner(sortable.SortableColumn):
 
 class LabelBoard(ui.row):
     cards: Mapping[ElementID, LabelColumnOuter]
+    inner_cards: Mapping[ElementID, LabelColumnInner]
     card_order: tuple[ElementID, ...]
     issues: gitlab.Issues
     issue_cards: dict[ElementID, LabelIssueCard]
@@ -86,17 +116,22 @@ class LabelBoard(ui.row):
             tuple(issues.values()), board.cards
         )
         self.board = board.evolve(*sorted_cards)
+        self.issue_cards = {}
         self.issues = issues
 
         cards: dict[ElementID, LabelColumnOuter] = {}
+        inner_cards: dict[ElementID, LabelColumnInner] = {}
         card_order: list[ElementID] = []
         with self:
             for card in self.board.cards:
                 label_card = LabelColumnOuter(card, self)
                 cards[label_card.id] = label_card
+                inner_card = label_card.inner
+                inner_cards[inner_card.id] = inner_card
                 card_order.append(label_card.id)
 
         self.cards = MappingProxyType(cards)
+        self.inner_cards = MappingProxyType(inner_cards)
         self.card_order = tuple(card_order)
 
     def update_and_save(self) -> None:

@@ -3,6 +3,8 @@ Handling data loading/updates from/to gitlab.
 """
 
 import functools
+import getpass
+import logging
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
@@ -10,7 +12,9 @@ import gitlab
 
 from . import settings
 from .caching import IssueCacheDict
-from .models import Issue, IssueID, Label, User
+from .models import Issue, IssueID, Label, User, UserID
+
+logger = logging.getLogger(__name__)
 
 
 @functools.cache
@@ -22,7 +26,12 @@ def get_gitlab() -> gitlab.Gitlab:
 @functools.cache
 def get_gitlab_user() -> User:
     gl = get_gitlab()
-    gl.auth()
+    try:
+        gl.auth()
+    except Exception:
+        logger.exception("Failed to authenticate to Gitlab. Fallback to login user")
+        username = getpass.getuser()
+        return User(username=username, id=UserID(-1), name=username, avatar_url="")
     if gl.user is None:
         raise RuntimeError("Could not determine GitLab user")
     return User.model_validate(gl.user.attributes)
@@ -32,7 +41,9 @@ def not_assigned_to_me(issue: Issue) -> bool:
     """
     Return True if the given issue is not assigned to the user holding the connection
     """
-    return all(assignee.id == get_gitlab_user().id for assignee in issue.assignees)
+    return all(
+        assignee.username == get_gitlab_user().username for assignee in issue.assignees
+    )
 
 
 class Issues:
