@@ -21,6 +21,7 @@ class LabelView(ui.html):
         super().__init__(label.name)
         self.label = label
         self.classes.append("rounded-full")
+        self.tailwind.padding("px-2")
         with self:
             self._tooltip = ui.tooltip(label.description or "")
         self.update_properties()
@@ -38,7 +39,9 @@ class LabelIssueCard(sortable.MoveableCard):
         self.issue = issue
 
         with self:
-            self.header = ui.link(issue.title, issue.web_url)
+            self.tailwind.width("full")
+            self.tailwind.padding("p-0.5")
+            self.header = ui.link(issue.title, issue.web_url, new_tab=True)
             with ui.row() as label_row:
                 self.label_row = label_row
                 self.label_row_elements = tuple(
@@ -54,16 +57,21 @@ class LabelColumnOuter(ui.column):
         self.card = card
         self.parent_board = parent_board
         super().__init__(wrap=False)
-        self.tailwind.width("96")
 
-        with self.classes("bg-blue-grey-2 w-60 p-4 rounded shadow-2"):
+        with self.classes("bg-blue-grey-2 rounded shadow-2"):
             if card.label == "opened":
                 self.header = ui.html("Opened")
             elif card.label == "closed":
                 self.header = ui.html("Closed")
             else:
                 self.header = LabelView(card.label)
-            self.inner = LabelColumnInner(self)
+            self.tailwind.height("full")
+            self.tailwind.padding("p-0")
+            self.tailwind.width("96")
+            with ui.scroll_area() as area:
+                area.tailwind.height("full")
+                area.tailwind.width("96")
+                self.inner = LabelColumnInner(self)  # row
 
 
 class LabelColumnInner(sortable.SortableColumn):
@@ -84,12 +92,8 @@ class LabelColumnInner(sortable.SortableColumn):
         super().__init__(name=str(self.card))
 
         with self:
-            # self.tailwind.width("fit")
-            # self.tailwind.height("max")
-            # with ui.scroll_area() as area:
-            #     area.tailwind.space_between("y-2")
-            #     area.tailwind.width("fit")
-            #     area.tailwind.height("max")
+            self.style("width: 22rem")
+            self.tailwind.padding("p-0")
             for issue_id in self.card.issues:
                 issue_card = LabelIssueCard(self.parent_board.issues[issue_id])
                 self.parent_board.issue_cards[issue_card.id] = issue_card
@@ -130,12 +134,15 @@ class LabelBoard(ui.row):
         inner_cards: dict[ElementID, LabelColumnInner] = {}
         card_order: list[ElementID] = []
         with self:
+            self.tailwind.height("screen")
             for card in self.board.cards:
                 label_card = LabelColumnOuter(card, self)
                 cards[label_card.id] = label_card
                 inner_card = label_card.inner
                 inner_cards[inner_card.id] = inner_card
                 card_order.append(label_card.id)
+            # empty column at the end in order to prevent some view bug
+            ui.column().tailwind.width("1")
 
         self.cards = MappingProxyType(cards)
         self.inner_cards = MappingProxyType(inner_cards)
