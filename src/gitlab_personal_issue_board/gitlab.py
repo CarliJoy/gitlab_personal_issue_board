@@ -41,9 +41,10 @@ def not_assigned_to_me(issue: Issue) -> bool:
     """
     Return True if the given issue is not assigned to the user holding the connection
     """
-    return all(
+    assigned_to_me = any(
         assignee.username == get_gitlab_user().username for assignee in issue.assignees
     )
+    return not assigned_to_me
 
 
 class Issues:
