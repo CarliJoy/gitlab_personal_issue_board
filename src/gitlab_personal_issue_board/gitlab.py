@@ -58,6 +58,7 @@ class Issues:
     def __init__(self) -> None:
         self._gl = get_gitlab()
         self._cache = IssueCacheDict()
+        self._cache.remove(not_assigned_to_me)
         # initialized with the last time the cache was updated
         # currently this is the time the last issues was updated.
         # TODO: Change it to the last time refresh was executed

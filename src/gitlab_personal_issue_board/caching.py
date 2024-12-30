@@ -79,6 +79,17 @@ class IssueCacheDict:
         for elm in self._cache.keys():
             self._refresh_item(elm)
 
+    def remove(self, remove: Callable[[Issue], bool]) -> None:
+        """
+        Remove all issues that meet *remove*
+        """
+        for issue_id, (_, issue) in tuple(self._cache.items()):
+            if remove(issue):
+                file = self._issue_cache_file(issue_id)
+                del self._cache[issue_id]
+                if file.exists():
+                    file.unlink()
+
     def update(self, gl_issue: "RESTObject", remove: Callable[[Issue], bool]) -> None:
         """
         Update the gl_issue state in cache.
