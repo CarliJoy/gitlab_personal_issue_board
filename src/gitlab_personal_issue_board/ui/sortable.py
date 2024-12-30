@@ -11,6 +11,8 @@ from typing import Final, Literal, Protocol, TypeVar
 
 from nicegui import events, ui
 
+type ElementID = int
+
 DROP_HANDLE: Final[str] = "drop_handle"
 DEFAULT_GROUP: Final[str] = "default_sortable_group"
 T = TypeVar("T", bound=ui.element)
@@ -26,12 +28,19 @@ class OnChange(Protocol):
     ) -> None: ...
 
 
+class OnChangeId(Protocol):
+    def __call__(
+        self, element_id: ElementID, new_place: ElementID, new_list: ElementID
+    ) -> None: ...
+
+
 class SortableColumn(ui.element, component="sortable_column.js"):
     def __init__(
         self,
         name: str,
         *,
         on_change: OnChange | None = None,
+        on_change_id: OnChangeId | None = None,
         group: str = DEFAULT_GROUP,
     ) -> None:
         super().__init__()
@@ -41,10 +50,12 @@ class SortableColumn(ui.element, component="sortable_column.js"):
         self.name = name
         self.on("item-drop", self.drop)
         self.on_change = on_change
-        self._items: list[int] = []
+        self.on_change_id = on_change_id
         self._props["group"] = group
 
-    def update_position(self, element_id: int, new_place: int, new_list: int) -> None:
+    def update_position(
+        self, element_id: ElementID, new_place: ElementID, new_list: ElementID
+    ) -> None:
         """Correct the position of element_id within new_list in new_place."""
         element = self.client.elements[element_id]
 
@@ -71,6 +82,8 @@ class SortableColumn(ui.element, component="sortable_column.js"):
         new_index = int(e.args["new_index"])
         new_list = int(e.args["new_list"])
         self.update_position(element_id, new_index, new_list)
+        if self.on_change_id:
+            self.on_change_id(element_id, new_index, new_list)
         if self.on_change:
             self.on_change(
                 self,
