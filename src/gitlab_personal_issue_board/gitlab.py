@@ -83,6 +83,9 @@ class Issues:
     def __getitem__(self, item: IssueID) -> Issue:
         return self._cache[item]
 
+    def __len__(self) -> int:
+        return len(self._cache)
+
     def values(self) -> Iterable[Issue]:
         yield from self._cache.values()
 

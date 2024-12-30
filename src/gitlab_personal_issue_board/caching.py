@@ -65,6 +65,9 @@ class IssueCacheDict:
     def _converter(cls, content: bytes) -> Issue:
         return Issue.model_validate_json(content)
 
+    def __len__(self) -> int:
+        return len(self._cache)
+
     def values(self) -> Iterable[Issue]:
         for _, issue in self._cache.values():
             yield issue
