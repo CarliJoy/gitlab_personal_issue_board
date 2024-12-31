@@ -50,7 +50,7 @@ class LabelIssueCard(sortable.MoveableCard):
             self.reference = ui.label(issue.references.full)
 
 
-class LabelColumnOuter(ui.column):
+class LabelColumn(ui.column):
     """Render a column with sortable Labels inside"""
 
     def __init__(self, card: models.LabelCard, parent_board: "LabelBoard") -> None:
@@ -59,100 +59,113 @@ class LabelColumnOuter(ui.column):
         super().__init__(wrap=False)
 
         with self.classes("bg-blue-grey-2 rounded shadow-2"):
-            if card.label == "opened":
-                self.header = ui.html("Opened")
-            elif card.label == "closed":
-                self.header = ui.html("Closed")
-            else:
-                self.header = LabelView(card.label)
+            with ui.row():
+                if card.label == "opened":
+                    self.header = ui.html("Opened")
+                elif card.label == "closed":
+                    self.header = ui.html("Closed")
+                else:
+                    self.header = LabelView(card.label)
+                self.count_label = ui.label("")
+                self.set_count_label()
             self.tailwind.height("full")
             self.tailwind.padding("p-0")
             self.tailwind.width("96")
             with ui.scroll_area() as area:
                 area.tailwind.height("full")
                 area.tailwind.width("96")
-                self.inner = LabelColumnInner(self)  # row
+                with sortable.SortableColumn(
+                    name=str(self.card), on_change_id=self._update_position
+                ) as card_column:
+                    card_column.style("width: 22rem")
+                    card_column.tailwind.padding("p-0")
+                    self.create_cards()
+                    self.card_column = card_column
 
-
-class LabelColumnInner(sortable.SortableColumn):
-    @property
-    def parent_board(self) -> "LabelBoard":
-        return self.outer.parent_board
-
-    @property
-    def card(self) -> models.LabelCard:
-        return self.outer.card
-
-    @card.setter
-    def card(self, value: models.LabelCard) -> None:
-        self.outer.card = value
-
-    def __init__(self, outer: LabelColumnOuter) -> None:
-        self.outer = outer
-        super().__init__(name=str(self.card))
-
-        with self:
-            self.style("width: 22rem")
-            self.tailwind.padding("p-0")
-            for issue_id in self.card.issues:
-                issue_card = LabelIssueCard(self.parent_board.issues[issue_id])
-                self.parent_board.issue_cards[issue_card.id] = issue_card
-
-    def update_position(
-        self, element_id: ElementID, new_place: ElementID, new_list: ElementID
-    ) -> None:
-        super().update_position(element_id, new_place, new_list)
-        self.refresh_card_by_ui()
-        if self.id != new_list:
-            self.parent_board.inner_cards[new_list].refresh_card_by_ui()
-        self.parent_board.update_and_save()
+    def set_count_label(self) -> None:
+        self.count_label.text = f" ({len(self.card.issues)})"
 
     def refresh_card_by_ui(self) -> None:
-        """Set the card state"""
+        """Set the card state from the UI state"""
         self.card = self.card.evolve(
-            [card.issue.id for card in self.cards(LabelIssueCard)]
+            [card.issue.id for card in self.card_column.cards(LabelIssueCard)]
         )
+        self.set_count_label()
+
+    def _update_position(
+        self, element_id: ElementID, new_place: ElementID, new_list: ElementID
+    ) -> None:
+        self.refresh_card_by_ui()
+        if self.id != new_list:
+            self.parent_board.id2column[new_list].refresh_card_by_ui()
+        self.parent_board.update_and_save()
+
+    @ui.refreshable_method
+    def create_cards(self) -> None:
+        for issue_id in self.card.issues:
+            LabelIssueCard(self.parent_board.issues[issue_id])
+
+    def refresh(self) -> None:
+        self.create_cards.refresh()
+        self.set_count_label()
 
 
-class LabelBoard(ui.row):
-    cards: Mapping[ElementID, LabelColumnOuter]
-    inner_cards: Mapping[ElementID, LabelColumnInner]
-    card_order: tuple[ElementID, ...]
+class LabelBoard(ui.element):
+    columns: tuple[LabelColumn, ...]
+    id2column: Mapping[ElementID, LabelColumn]
     issues: gitlab.Issues
-    issue_cards: dict[ElementID, LabelIssueCard]
 
     def __init__(self, board: models.LabelBoard, issues: gitlab.Issues) -> None:
-        super().__init__(wrap=False)
+        super().__init__()
         sorted_cards = controller.sort_issues_in_cards_by_label(
             tuple(issues.values()), board.cards
         )
         self.board = board.evolve(*sorted_cards)
-        self.issue_cards = {}
         self.issues = issues
 
-        cards: dict[ElementID, LabelColumnOuter] = {}
-        inner_cards: dict[ElementID, LabelColumnInner] = {}
-        card_order: list[ElementID] = []
         with self:
             self.tailwind.height("screen")
-            for card in self.board.cards:
-                label_card = LabelColumnOuter(card, self)
-                cards[label_card.id] = label_card
-                inner_card = label_card.inner
-                inner_cards[inner_card.id] = inner_card
-                card_order.append(label_card.id)
-            # empty column at the end in order to prevent some view bug
-            ui.column().tailwind.width("1")
+            self.top_row = ui.row(wrap=False)
+            with self.top_row:
+                self.top_row.tailwind.width("full")
+                self.top_row.tailwind.padding("p-4")
+                ui.button("Refresh", on_click=self.refresh)
 
-        self.cards = MappingProxyType(cards)
-        self.inner_cards = MappingProxyType(inner_cards)
-        self.card_order = tuple(card_order)
+            self.card_row = ui.row(wrap=False)
+            with self.card_row:
+                self.card_row.tailwind.height("full")
+                self.card_row.tailwind.width("screen")
+                self.columns = tuple(
+                    LabelColumn(card, self) for card in self.board.cards
+                )
+
+                # empty column at the end in order to prevent some view bug
+                ui.column().tailwind.width("1")
+
+        self.id2column = MappingProxyType(
+            {column.id: column for column in self.columns}
+            | {column.card_column.id: column for column in self.columns}
+        )
+
+    @property
+    def column_cards(self) -> tuple[models.LabelCard, ...]:
+        """Cards as display by the ui"""
+        return tuple(column.card for column in self.columns)
+
+    def refresh(self) -> None:
+        self.issues.refresh()
+        sorted_cards = controller.sort_issues_in_cards_by_label(
+            tuple(self.issues.values()), self.column_cards
+        )
+        self.board = self.board.evolve(*sorted_cards)
+        for column, card in zip(self.columns, self.board.cards, strict=True):
+            column.card = card
+            column.refresh()
+        ui.notify("Refreshed Cards")
 
     def update_and_save(self) -> None:
         """
         Save current state of the board as shown the UI
         """
-        self.board = self.board.evolve(
-            *[self.cards[element].card for element in self.card_order]
-        )
+        self.board = self.board.evolve(*self.column_cards)
         boards.save_label_board(self.board)
