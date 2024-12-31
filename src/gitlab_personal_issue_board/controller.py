@@ -42,7 +42,7 @@ def sort_issues_in_cards_by_label(
 
     # after we have the old issues we need to determine new issue to add
     card_issues_new: list[list[IssueID]] = []
-    for card, already_added in zip(reversed(cards), card_issues_old, strict=False):
+    for card, already_added in zip(reversed(cards), card_issues_old, strict=True):
         to_add: list[IssueID] = [
             issue.id
             for issue in issues
@@ -53,6 +53,6 @@ def sort_issues_in_cards_by_label(
 
     # the card_issues_* have to be reverted to get the correct order of cards
     for card, issue_old, issue_new in zip(
-        cards, reversed(card_issues_old), reversed(card_issues_new), strict=False
+        cards, reversed(card_issues_old), reversed(card_issues_new), strict=True
     ):
         yield card.evolve(issue_new, issue_old)
