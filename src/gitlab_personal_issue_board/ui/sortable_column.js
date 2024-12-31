@@ -1,4 +1,4 @@
-import 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.3/Sortable.min.js'
+import '/js/Sortable.min.js'
 
 export default {
     template: `

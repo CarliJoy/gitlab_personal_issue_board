@@ -7,15 +7,20 @@ and https://github.com/zauberzeug/nicegui/discussions/3830#discussioncomment-109
 
 import contextlib
 from collections.abc import Generator, Iterable
+from pathlib import Path
 from typing import Final, Literal, Protocol, TypeVar
 
-from nicegui import events, ui
+from nicegui import app, events, ui
 
 type ElementID = int
 
 DROP_HANDLE: Final[str] = "drop_handle"
 DEFAULT_GROUP: Final[str] = "default_sortable_group"
 T = TypeVar("T", bound=ui.element)
+
+app.add_static_file(
+    local_file=Path(__file__).parent / "Sortable.min.js", url_path="/js/Sortable.min.js"
+)
 
 
 class OnChange(Protocol):
