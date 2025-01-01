@@ -38,16 +38,16 @@ class LabelIssueCard(sortable.MoveableCard):
     def __init__(self, issue: models.Issue) -> None:
         super().__init__()
         self.issue = deepcopy(issue)
+        self._label_views: dict[models.Label, LabelView] = {}
+        self.label_row_elements: tuple[LabelView, ...] = ()
 
         with self:
+            # init issue card
             self.tailwind.width("full")
             self.tailwind.padding("p-0.5")
             self.header = ui.link(issue.title, issue.web_url, new_tab=True)
-            with ui.row() as label_row:
-                self.label_row = label_row
-                self.label_row_elements = tuple(
-                    LabelView(label) for label in issue.labels
-                )
+            self.label_row = ui.row()
+            self.update_label_row()
             self.reference = ui.label(issue.references.full)
 
     def refresh(self, issue: models.Issue) -> None:
@@ -55,23 +55,45 @@ class LabelIssueCard(sortable.MoveableCard):
             self.issue = issue
             self.set_content()
 
-    def set_content(self) -> None:
-        self.header.props["text"] = self.issue.title
-        self.header.props["target"] = self.issue.web_url
+    def _get_or_create_label_view(self, label: models.Label) -> LabelView:
+        try:
+            return self._label_views[label]
+        except KeyError:
+            self._label_views[label] = LabelView(label)
+            return self._label_views[label]
+
+    def update_label_row(self) -> None:
         # any missmatch in labels, regenerate labels
         if len(self.label_row_elements) != len(self.issue.labels) or any(
             label_view.label != label
             for label_view, label in zip(
-                self.label_row_elements, self.issue.labels, strict=False
+                self.label_row_elements, self.issue.labels, strict=True
             )
         ):
-            for label_view in self.label_row_elements:
-                label_view.delete()
-
-            with self.label_row:
-                self.label_row_elements = tuple(
-                    LabelView(label) for label in self.issue.labels
+            with self:
+                with self.label_row:
+                    new_label_row = tuple(
+                        self._get_or_create_label_view(label)
+                        for label in self.issue.labels
+                    )
+            to_remove = [
+                elem
+                for elem in self._label_views.values()
+                if elem.label not in self.issue.labels
+            ]
+            for elem in to_remove:
+                self.label_row.client.remove_elements(
+                    elem.descendants(include_self=True)
                 )
+                del self._label_views[elem.label]
+            self.label_row.default_slot.children = list(new_label_row)
+            self.label_row_elements = new_label_row
+            self.label_row.update()
+
+    def set_content(self) -> None:
+        self.header.props["text"] = self.issue.title
+        self.header.props["target"] = self.issue.web_url
+        self.update_label_row()
         self.reference.set_text(self.issue.references.full)
 
 
