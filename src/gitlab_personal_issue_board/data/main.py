@@ -1,3 +1,4 @@
+import logging
 from collections import Counter
 from collections.abc import Iterable
 
@@ -21,6 +22,8 @@ from gitlab_personal_issue_board.data import boards
       "name": "status::wontfix",
 
 """
+
+logger = logging.getLogger(__name__)
 
 
 def gen_board(issues: gitlab.Issues, label_names: Iterable[str]) -> models.LabelBoard:
@@ -55,10 +58,14 @@ BOARD_ID = models.LabelBoardID("dc1b6246-4422-4f9a-89dc-6377e4ce3e00")
 
 def main() -> None:
     issues = gitlab.Issues()
+    logger.info(f"Loaded {len(issues)} issues")
+    print("Load board")
     board = boards.load_label_board(BOARD_ID)
+    print("Load LabelBoard")
     view_model.LabelBoard(board, issues=issues)
-    # ver 45
-    ui.run()
+    print("Finished load label board")
+    # ver 71
+    ui.run(title="GL Personal Board", show=False)
 
 
 if __name__ == "__mp_main__":

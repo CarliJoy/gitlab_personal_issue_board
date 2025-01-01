@@ -136,6 +136,9 @@ class LabelCard(BaseModel):
             return self
         return LabelCard(label=self.label, issues=new_issues)
 
+    def __str__(self) -> str:
+        return f"Label Card {self.label}"
+
 
 class LabelBoard(BaseModel):
     """
