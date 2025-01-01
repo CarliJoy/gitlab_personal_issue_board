@@ -2,9 +2,8 @@
 Handling the interaction between Models and UI using our controller
 """
 
-import contextlib
 import types
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Mapping
 from copy import deepcopy
 
 from nicegui import run, ui
@@ -82,6 +81,7 @@ class LabelColumn(ui.column):
     def __init__(self, card: models.LabelCard, parent_board: "LabelBoard") -> None:
         self.card = card
         self.parent_board = parent_board
+        self._issue_cards: dict[models.IssueID, LabelIssueCard] = {}
         super().__init__(wrap=False)
 
         with self.classes("bg-blue-grey-2 rounded shadow-2"):
@@ -117,6 +117,47 @@ class LabelColumn(ui.column):
         )
         self.set_count_label()
 
+    def _update_or_create_issue_card(self, issue: models.Issue) -> LabelIssueCard:
+        """
+        Return an updated existing LabelIssueCard or create a new one
+        """
+        try:
+            issue_card = self._issue_cards[issue.id]
+        except KeyError:
+            # Issue card not found create a new on
+            issue_card = LabelIssueCard(issue)
+            self._issue_cards[issue.id] = issue_card
+        else:
+            # update Existing issue crd
+            issue_card.refresh(issue)
+        return issue_card
+
+    def update_issue_cards(self) -> None:
+        """
+        Update/refresh the issue cards with the current data from gitlab
+
+        Unfortunately we can't use ui.refreshable as it doesn't mix with sortable.
+        It leads too high CPU load in the browser and makes it hard to identify the
+        correct element to move thing to.
+        """
+        with self.card_column:
+            issue_cards: list[ui.element] = [
+                self._update_or_create_issue_card(self.parent_board.issues[issue_id])
+                for issue_id in self.card.issues
+            ]
+            if issue_cards != self.card_column.default_slot.children:
+                to_remove = set(self.card.issues) - set(self._issue_cards.keys())
+                for issue_id in to_remove:
+                    element = self._issue_cards[issue_id]
+                    # based on element.remove(), but we handle overwriting the
+                    # stack children and the update our self
+                    self.card_column.client.remove_elements(
+                        element.descendants(include_self=True)
+                    )
+                    del self._issue_cards[issue_id]
+                self.card_column.default_slot.children = issue_cards
+                self.card_column.update()
+
     def _update_position(
         self, element_id: ElementID, new_place: int, new_list: ElementID
     ) -> None:
@@ -127,70 +168,6 @@ class LabelColumn(ui.column):
 
     def __str__(self) -> str:
         return f"<Label Column {self.id} {self.card}>"
-
-
-class ColumnCardUpdater:
-    """
-    This is an Helper to update/refresh the ui with the current data from gitlab
-
-    Unfortunately we can't use ui.refreshable as it doesn't mix with sortable.
-    It leads too high CPU load in the browser and makes it hard to identify the
-    correct element to move thing to.
-
-    It is intended to be used as a context manager
-    """
-
-    def __init__(self) -> None:
-        # an issue could appear in multiple columns
-        self._issues_cards: dict[tuple[models.IssueID, ElementID], LabelIssueCard] = {}
-
-    @contextlib.contextmanager
-    def __call__(
-        self, issues: gitlab.Issues
-    ) -> Generator[Callable[[LabelColumn], None]]:
-        used_issued_cards: set[ElementID] = set()
-
-        def update_column(column: LabelColumn) -> None:
-            """
-            Set the correct label cards for the given *column*
-            """
-
-            def get_or_create(issue_id: models.IssueID) -> LabelIssueCard:
-                """
-                Return an existing LabelIssueCard or create a new one
-                """
-                try:
-                    issue_card = self._issues_cards[(issue_id, column.id)]
-                except KeyError:
-                    # Issue card not found create a new on
-                    issue_card = LabelIssueCard(issues[issue_id])
-                    self._issues_cards[(issue_id, column.id)] = issue_card
-                else:
-                    # update Existing issue crd
-                    issue_card.refresh(issues[issue_id])
-
-                used_issued_cards.add(issue_card.id)
-                return issue_card
-
-            with column.card_column:
-                issue_cards: list[ui.element] = [
-                    get_or_create(issue_id) for issue_id in column.card.issues
-                ]
-                if issue_cards == column.card_column.default_slot.children:
-                    print(f"{column} is up to date")
-                else:
-                    print(f"{column} needs updating new Issues: {column.card.issues}")
-                    column.card_column.default_slot.children = issue_cards
-                    column.card_column.update()
-
-        yield update_column
-
-        # remove unused cards
-        card_id2key = {card.id: k for k, card in self._issues_cards.items()}
-        unused_cards = set(card_id2key.keys()) - used_issued_cards
-        for unused_card in unused_cards:
-            self._issues_cards[card_id2key[unused_card]].delete()
-            del self._issues_cards[card_id2key[unused_card]]
 
 
 class LabelBoard(ui.element):
@@ -206,7 +183,6 @@ class LabelBoard(ui.element):
         self.board = board.evolve(*sorted_cards)
         self.issues = issues
         self.id2column = {}
-        self._updater = ColumnCardUpdater()
 
         with self:
             self.tailwind.height("screen")
@@ -241,17 +217,14 @@ class LabelBoard(ui.element):
         return tuple(column.card for column in self.columns)
 
     def update_cards(self) -> None:
-        with self._updater(self.issues) as update:
-            for column in self.columns:
-                update(column)
+        for column in self.columns:
+            column.update_issue_cards()
 
     async def refresh(self) -> None:
         ui.notify(
             "Starting to load new issues from gitlab", position="center", type="info"
         )
-        print("Start Refresh")
         await run.io_bound(self.issues.refresh)
-        print("Loaded issues")
         sorted_cards = controller.sort_issues_in_cards_by_label(
             tuple(self.issues.values()), self.column_cards
         )
@@ -259,7 +232,6 @@ class LabelBoard(ui.element):
         for column, card in zip(self.columns, self.board.cards, strict=True):
             column.card = card
         self.update_cards()
-        print("Finished refreshing")
         ui.notify("Refreshed Cards", position="center", type="positive")
 
     def update_and_save(self) -> None:
