@@ -59,28 +59,12 @@ class SortableColumn(ui.element, component="sortable_column.js"):
         self._props["group"] = group
 
     def update_position(
-        self, element_id: ElementID, new_place: ElementID, new_list: ElementID
+        self, element_id: ElementID, new_place: int, new_list: ElementID
     ) -> None:
         """Correct the position of element_id within new_list in new_place."""
         element = self.client.elements[element_id]
-
-        # TODO: use element.move()
-
-        # Remove the element from the current position
-        self.default_slot.children.remove(element)
-
-        if new_list == self.id:
-            # Insert the element into the new position
-            self.default_slot.children.insert(new_place, element)
-        else:
-            # Move the dragged element to new outer element
-            target = self.client.elements[new_list]
-            element.parent_slot = target.default_slot
-            target.default_slot.children.insert(new_place, element)
-            target.update()
-
-        # Trigger re-rendering of the UI
-        self.update()
+        target = self.client.elements[new_list]
+        element.move(target, new_place)
 
     async def drop(self, e: events.GenericEventArguments) -> None:
         element_id = int(e.args["id"])
