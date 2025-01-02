@@ -34,7 +34,7 @@ class OnChange(Protocol):
 
 
 class OnChangeId(Protocol):
-    def __call__(
+    async def __call__(
         self, element_id: ElementID, new_place: ElementID, new_list: ElementID
     ) -> None: ...
 
@@ -72,7 +72,7 @@ class SortableColumn(ui.element, component="sortable_column.js"):
         new_list = int(e.args["new_list"])
         self.update_position(element_id, new_index, new_list)
         if self.on_change_id:
-            self.on_change_id(element_id, new_index, new_list)
+            await self.on_change_id(element_id, new_index, new_list)
         if self.on_change:
             self.on_change(
                 self,

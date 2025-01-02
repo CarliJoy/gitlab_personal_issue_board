@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final, Union
 
 import orjson as json
 from pydantic import ValidationError
@@ -90,7 +90,11 @@ class IssueCacheDict:
                 if file.exists():
                     file.unlink()
 
-    def update(self, gl_issue: "RESTObject", remove: Callable[[Issue], bool]) -> None:
+    def update(
+        self,
+        gl_issue: Union["RESTObject", dict[str, Any]],
+        remove: Callable[[Issue], bool],
+    ) -> None:
         """
         Update the gl_issue state in cache.
 
@@ -101,7 +105,8 @@ class IssueCacheDict:
             remove: Callable, if True, will remove the issue from cache
 
         """
-        content = json.dumps(gl_issue.attributes, option=json.OPT_INDENT_2)
+        data = gl_issue if isinstance(gl_issue, dict) else gl_issue.attributes
+        content = json.dumps(data, option=json.OPT_INDENT_2)
         try:
             issue = self._converter(content)
         except ValidationError:

@@ -7,6 +7,7 @@ import getpass
 import logging
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from typing import Any, Literal
 
 import gitlab
 
@@ -65,21 +66,46 @@ class Issues:
         self._last_updated = self._cache.last_updated
 
     def assign_new_labels(
-        self, issue: Issue | IssueID, new_label: Label, old_labels: Iterable[Label]
+        self,
+        issue: Issue,
+        new_label: Label | Literal["opened", "closed"],
+        old_labels: Iterable[Label],
     ) -> None:
         """
         Assign *issue* with *new_label* while removing *old_labels*
         """
-        if isinstance(issue, Issue):
-            issue_id = issue.id
-        else:
-            issue_id = issue
-
-        gl_issue = self._gl.issues.get(issue_id)
+        # can only retreive single issues from project not from complese instance
+        gl_project = self._gl.projects.get(issue.project_id)
+        project_labels: dict[str, dict[str, Any]] = {
+            label.name: label.attributes
+            for label in gl_project.labels.list(get_all=True)
+        }
+        gl_issue = gl_project.issues.get(issue.iid)
         old_label_names = {label.name for label in old_labels}
-        new_labels = (set(gl_issue.labels) - old_label_names) | {new_label.name}
+        new_labels = set(gl_issue.labels) - old_label_names
+        if isinstance(new_label, Label):
+            # handle adding a real new label
+            new_labels |= {new_label.name}
+            if new_label.name not in project_labels:
+                new_label_data = new_label.model_dump()
+                gl_project.labels.create(new_label_data)
+                project_labels[new_label.name] = new_label_data
+        if new_label == "closed":
+            if gl_issue.state != "closed":
+                # close issues that need to be closed
+                gl_issue.state_event = "close"
+        elif gl_issue.state == "closed":
+            # reopen closed issue if moved from closed
+            gl_issue.state_event = "reopen"
         gl_issue.labels = sorted(new_labels)
-        gl_issue.save()
+        new_issue: dict[str, Any] = gl_issue.save() or {}
+        if not new_issue:
+            return
+        # replace the label names with label attributes
+        new_issue["labels"] = [
+            project_labels[label] for label in tuple(new_issue["labels"])
+        ]
+        self._cache.update(new_issue, not_assigned_to_me)
 
     def __getitem__(self, item: IssueID) -> Issue:
         return self._cache[item]

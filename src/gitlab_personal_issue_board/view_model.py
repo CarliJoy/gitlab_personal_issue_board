@@ -3,7 +3,7 @@ Handling the interaction between Models and UI using our controller
 """
 
 import types
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from copy import deepcopy
 
 from nicegui import run, ui
@@ -104,6 +104,7 @@ class LabelColumn(ui.column):
         self.card = card
         self.parent_board = parent_board
         self._issue_cards: dict[models.IssueID, LabelIssueCard] = {}
+        self._card_ids: dict[ElementID, LabelIssueCard] = {}
         super().__init__(wrap=False)
 
         with self.classes("bg-blue-grey-2 rounded shadow-2"):
@@ -137,6 +138,9 @@ class LabelColumn(ui.column):
         self.card = self.card.evolve(
             [card.issue.id for card in self.card_column.cards(LabelIssueCard)]
         )
+        for card in self.card_column.cards(LabelIssueCard):
+            self._issue_cards[card.issue.id] = card
+            self._card_ids[card.id] = card
         self.set_count_label()
 
     def _update_or_create_issue_card(self, issue: models.Issue) -> LabelIssueCard:
@@ -149,6 +153,7 @@ class LabelColumn(ui.column):
             # Issue card not found create a new on
             issue_card = LabelIssueCard(issue)
             self._issue_cards[issue.id] = issue_card
+            self._card_ids[issue_card.id] = issue_card
         else:
             # update Existing issue crd
             issue_card.refresh(issue)
@@ -173,6 +178,7 @@ class LabelColumn(ui.column):
                     element = self._issue_cards[issue_id]
                     # based on element.remove(), but we handle overwriting the
                     # stack children and the update our self
+                    del self._card_ids[element.id]
                     self.card_column.client.remove_elements(
                         element.descendants(include_self=True)
                     )
@@ -180,12 +186,24 @@ class LabelColumn(ui.column):
                 self.card_column.default_slot.children = issue_cards
                 self.card_column.update()
 
-    def _update_position(
+    async def update_gl_issue_state(self, element_id: ElementID) -> None:
+        card = self._card_ids[element_id]
+        await run.io_bound(
+            self.parent_board.issues.assign_new_labels,
+            card.issue,
+            self.card.label,
+            self.parent_board.card_labels,
+        )
+        self.parent_board.update_cards()
+
+    async def _update_position(
         self, element_id: ElementID, new_place: int, new_list: ElementID
     ) -> None:
         self.refresh_card_by_ui()
         if self.id != new_list:
-            self.parent_board.id2column[new_list].refresh_card_by_ui()
+            target = self.parent_board.id2column[new_list]
+            target.refresh_card_by_ui()
+            await target.update_gl_issue_state(element_id)
         self.parent_board.update_and_save()
 
     def __str__(self) -> str:
@@ -199,10 +217,7 @@ class LabelBoard(ui.element):
 
     def __init__(self, board: models.LabelBoard, issues: gitlab.Issues) -> None:
         super().__init__()
-        sorted_cards = controller.sort_issues_in_cards_by_label(
-            tuple(issues.values()), board.cards
-        )
-        self.board = board.evolve(*sorted_cards)
+        self.board = board
         self.issues = issues
         self.id2column = {}
 
@@ -228,10 +243,12 @@ class LabelBoard(ui.element):
             {column.id: column for column in self.columns}
             | {column.card_column.id: column for column in self.columns}
         )
-
-        print(f"{self.id} Init Update start")
         self.update_cards()
-        print(f"{self.id} Init Update end")
+
+    @property
+    def card_labels(self) -> tuple[models.Label, ...]:
+        labels: Iterable[models.Label | str] = (card.label for card in self.board.cards)
+        return tuple(label for label in labels if isinstance(label, models.Label))
 
     @property
     def column_cards(self) -> tuple[models.LabelCard, ...]:
@@ -239,22 +256,29 @@ class LabelBoard(ui.element):
         return tuple(column.card for column in self.columns)
 
     def update_cards(self) -> None:
-        for column in self.columns:
-            column.update_issue_cards()
-
-    async def refresh(self) -> None:
-        ui.notify(
-            "Starting to load new issues from gitlab", position="center", type="info"
-        )
-        await run.io_bound(self.issues.refresh)
         sorted_cards = controller.sort_issues_in_cards_by_label(
             tuple(self.issues.values()), self.column_cards
         )
         self.board = self.board.evolve(*sorted_cards)
         for column, card in zip(self.columns, self.board.cards, strict=True):
             column.card = card
+        for column in self.columns:
+            column.update_issue_cards()
+
+    async def refresh(self, notify: bool = True) -> None:
+        """
+        Refresh the UI state from gitlab data
+        """
+        if notify:
+            ui.notify(
+                "Starting to load new issues from gitlab",
+                position="center",
+                type="info",
+            )
+        await run.io_bound(self.issues.refresh)
         self.update_cards()
-        ui.notify("Refreshed Cards", position="center", type="positive")
+        if notify:
+            ui.notify("Refreshed Cards", position="center", type="positive")
 
     def update_and_save(self) -> None:
         """
