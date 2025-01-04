@@ -427,10 +427,14 @@ class LabelBoard(ui.element):
                 position="center",
                 type="info",
             )
-        await run.io_bound(self.issues.refresh)
-        self.update_cards()
-        if notify:
-            ui.notify("Refreshed Cards", position="center", type="positive")
+        res = await run.io_bound(self.issues.refresh)
+        if isinstance(res, str):
+            self.update_cards()  # Still update the cards
+            ui.notify(res, type="warning")
+        else:
+            self.update_cards()
+            if notify:
+                ui.notify("Refreshed Cards", position="center", type="positive")
 
     def update_and_save(self) -> None:
         """
