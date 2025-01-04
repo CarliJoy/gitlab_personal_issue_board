@@ -227,6 +227,7 @@ class LabelBoard(ui.element):
             with self.top_row:
                 self.top_row.tailwind.width("full")
                 self.top_row.tailwind.padding("p-4")
+                ui.button("Menu", on_click=lambda: ui.navigate.to("/"))
                 ui.button("Refresh", on_click=self.refresh)
 
             self.card_row = ui.row(wrap=False)

@@ -20,3 +20,10 @@ def load_label_board(
 ) -> models.LabelBoard:
     source = _label_board_path(board)
     return models.LabelBoard.model_validate_json(source.read_text())
+
+
+def load_label_boards() -> tuple[models.LabelBoard, ...]:
+    return tuple(
+        load_label_board(file)
+        for file in settings.data_dir().glob("label_board_*.json")
+    )
