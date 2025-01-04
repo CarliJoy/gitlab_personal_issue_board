@@ -1,7 +1,12 @@
 import pytest
 from pydantic import ValidationError
 
-from gitlab_personal_issue_board.models import Label, LabelBoard, LabelCard
+from gitlab_personal_issue_board.models import (
+    Label,
+    LabelBoard,
+    LabelBoardID,
+    LabelCard,
+)
 
 from .conftest import gen_label_card_data
 
@@ -97,3 +102,12 @@ def test_label_card_deduplication() -> None:
     obj = LabelCard.model_validate(data)
 
     assert obj.issues == (1, 2, 3, 4, 5, 6, 7)
+
+
+def test_label_board_with_no_cards() -> None:
+    """
+    Properties has_opened and has_closed return False for empty LabelBoards
+    """
+    board = LabelBoard(id=LabelBoardID("fake"), name="fake", cards=())
+    assert board.has_opened is False
+    assert board.has_closed is False
