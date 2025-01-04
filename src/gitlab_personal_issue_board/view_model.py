@@ -8,9 +8,8 @@ from copy import deepcopy
 
 from nicegui import run, ui
 
-from . import controller, gitlab, models
-from .data import boards
-from .ui import sortable
+from . import controller, data, gitlab, models
+from .ui import navigate_to, sortable
 
 type ElementID = int
 
@@ -97,8 +96,155 @@ class LabelIssueCard(sortable.MoveableCard):
         self.reference.set_text(self.issue.references.full)
 
 
+class MoveableLabel(ui.row):
+    @property
+    def label(self) -> models.Label:
+        return self.label_view.label
+
+    def __init__(self, label: models.Label) -> None:
+        super().__init__(wrap=False)
+        with self:
+            self.tailwind.width("full")
+            self.tailwind.cursor("grab")
+            self.classes(sortable.DROP_HANDLE)
+            self.label_view = LabelView(label)
+
+
+class ActiveBoardLabels(ui.column):
+    """
+    Configure the active board
+    """
+
+    def __init__(self, board: models.LabelBoard) -> None:
+        self.board = board
+
+        super().__init__(wrap=False)
+        with self.classes("bg-blue-grey-2 rounded shadow-2"):
+            self.tailwind.height("full")
+            self.tailwind.padding("p-0")
+            self.tailwind.width("96")
+            self.name = ui.input(
+                "Name", placeholder="Name of the Label bord", value=board.name
+            )
+            with ui.scroll_area() as area:
+                area.tailwind.height("full")
+                area.tailwind.width("96")
+                self.opened = ui.switch("Opened", value=board.has_opened)
+                with sortable.SortableColumn(
+                    name=f"{self.board.id}_active"
+                ) as card_column:
+                    self.card_column = card_column
+                    card_column.style("width: 22rem")
+                    card_column.tailwind.padding("p-0")
+
+                    for label in board.card_labels:
+                        MoveableLabel(label)
+
+                self.closed = ui.switch("Closed", value=board.has_opened)
+
+    def save(self) -> None:
+        cards: dict[str | str, models.LabelCard] = {
+            card.label.name: card
+            for card in self.board.cards
+            if isinstance(card.label, models.Label)
+        }
+        new_cards: list[models.LabelCard] = []
+
+        if self.opened.value:
+            if self.board.has_opened:
+                new_cards.append(self.board.cards[0])
+            else:
+                new_cards.append(models.LabelCard(label="opened", issues=()))
+
+        for label_view in self.card_column.cards(MoveableLabel):
+            if label_view.label.name in cards:
+                new_cards.append(cards[label_view.label.name])
+            else:
+                new_cards.append(models.LabelCard(label=label_view.label, issues=()))
+
+        if self.closed.value:
+            if self.board.has_closed:
+                new_cards.append(self.board.cards[-1])
+            else:
+                new_cards.append(models.LabelCard(label="closed", issues=()))
+
+        try:
+            new_board = models.LabelBoard(
+                id=self.board.id,
+                name=self.name.value,
+                cards=tuple(new_cards),
+            )
+            data.save_label_board(new_board)
+        except Exception as e:
+            ui.notify(f"Could not save board:\n{type(e).__name__}: {e}", type="warning")
+        else:
+            self.board = new_board
+            ui.notify("Saved successfully", type="positive")
+
+
+class InactiveBoardLabels(ui.column):
+    def __init__(
+        self, board: models.LabelBoard, labels: Mapping[str, models.Label]
+    ) -> None:
+        self.labels = labels
+        self.active_labels = {label.name for label in board.card_labels}
+
+        super().__init__(wrap=False)
+        with self.classes("bg-blue-grey-2 rounded shadow-2"):
+            self.tailwind.height("full")
+            self.tailwind.padding("p-0")
+            self.tailwind.width("96")
+            with ui.scroll_area() as area:
+                area.tailwind.height("full")
+                area.tailwind.width("96")
+
+                with sortable.SortableColumn(name=f"{self.id}_inactive") as card_column:
+                    card_column.style("width: 22rem")
+                    card_column.tailwind.padding("p-0")
+
+                    for label in sorted(
+                        self.labels.values(), key=lambda label: label.name
+                    ):
+                        if label.name not in self.active_labels:
+                            MoveableLabel(label)
+
+
+class BoardConfiguration(ui.element):
+    def __init__(self, board: models.LabelBoard, issues: gitlab.Issues) -> None:
+        super().__init__()
+        self.board = board
+        issues.refresh()
+        labels = controller.get_labels_from_issues(issues.values())
+        with self:
+            self.tailwind.height("screen")
+            self.top_row = ui.row(wrap=False)
+            with self.top_row:
+                self.top_row.tailwind.width("full")
+                self.top_row.tailwind.padding("p-4")
+                ui.button("Menu", on_click=navigate_to("/"))
+                ui.button("Save", on_click=self.save)
+                ui.button("Save and view", on_click=self.save_and_view)
+                ui.button("Cancel and view", on_click=navigate_to(self.board.view_link))
+
+            self.card_row = ui.row(wrap=False)
+            with self.card_row:
+                self.card_row.tailwind.height("full")
+                self.card_row.tailwind.width("screen")
+                self.active = ActiveBoardLabels(board=board)
+                self.inactive = InactiveBoardLabels(board=board, labels=labels)
+                # empty column at the end in order to prevent some view bug
+                ui.column().tailwind.width("1")
+
+    def save(self) -> None:
+        self.active.save()
+
+    def save_and_view(self) -> None:
+        self.save()
+        ui.navigate.to(self.board.view_link)
+
+
 class LabelColumn(ui.column):
-    """Render a column with sortable Labels inside"""
+    """Render a column with sortable cards by labels inside"""
 
     def __init__(self, card: models.LabelCard, parent_board: "LabelBoard") -> None:
         self.card = card
@@ -227,8 +373,11 @@ class LabelBoard(ui.element):
             with self.top_row:
                 self.top_row.tailwind.width("full")
                 self.top_row.tailwind.padding("p-4")
-                ui.button("Menu", on_click=lambda: ui.navigate.to("/"))
+                ui.icon("label")
+                ui.label(self.board.name)
+                ui.button("Menu", on_click=navigate_to("/"))
                 ui.button("Refresh", on_click=self.refresh)
+                ui.button("Edit Board", on_click=navigate_to(board.edit_link))
 
             self.card_row = ui.row(wrap=False)
             with self.card_row:
@@ -286,4 +435,4 @@ class LabelBoard(ui.element):
         Save current state of the board as shown the UI
         """
         self.board = self.board.evolve(*self.column_cards)
-        boards.save_label_board(self.board)
+        data.save_label_board(self.board)

@@ -165,6 +165,14 @@ class LabelBoard(BaseModel):
     def has_closed(self) -> bool:
         return bool(self.cards) and self.cards[-1].is_closed
 
+    @property
+    def edit_link(self) -> str:
+        return f"/boards/{self.id}/edit"
+
+    @property
+    def view_link(self) -> str:
+        return f"/boards/{self.id}/view"
+
     def evolve(self, *cards: LabelCard) -> "LabelBoard":
         return LabelBoard(id=self.id, name=self.name, cards=cards)
 
