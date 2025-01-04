@@ -29,8 +29,11 @@ def get_gitlab_user() -> User:
     gl = get_gitlab()
     try:
         gl.auth()
-    except Exception:
-        logger.exception("Failed to authenticate to Gitlab. Fallback to login user")
+    except Exception as e:
+        logger.error(
+            f"Failed to authenticate to Gitlab. Fallback to login user. "
+            f"Error was: {type(e).__name__}: {e}"
+        )
         username = getpass.getuser()
         return User(username=username, id=UserID(-1), name=username, avatar_url="")
     if gl.user is None:
