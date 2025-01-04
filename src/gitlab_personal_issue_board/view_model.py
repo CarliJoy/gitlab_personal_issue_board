@@ -330,6 +330,8 @@ class LabelColumn(ui.column):
                     )
                     del self._issue_cards[issue_id]
                 self.card_column.default_slot.children = issue_cards
+                for issue_card in issue_cards:
+                    issue_card.parent_slot = self.card_column.default_slot
                 self.card_column.update()
 
     async def update_gl_issue_state(self, element_id: ElementID) -> None:
