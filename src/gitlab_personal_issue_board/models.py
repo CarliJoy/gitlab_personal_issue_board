@@ -152,6 +152,19 @@ class LabelBoard(BaseModel):
     name: str
     cards: Annotated[tuple[LabelCard, ...], AfterValidator(validate_label_cards)]
 
+    @property
+    def card_labels(self) -> tuple[Label, ...]:
+        labels: Iterable[Label | str] = (card.label for card in self.cards)
+        return tuple(label for label in labels if isinstance(label, Label))
+
+    @property
+    def has_opened(self) -> bool:
+        return bool(self.cards) and self.cards[0].is_opened
+
+    @property
+    def has_closed(self) -> bool:
+        return bool(self.cards) and self.cards[-1].is_closed
+
     def evolve(self, *cards: LabelCard) -> "LabelBoard":
         return LabelBoard(id=self.id, name=self.name, cards=cards)
 

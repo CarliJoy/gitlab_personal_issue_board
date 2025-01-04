@@ -192,7 +192,7 @@ class LabelColumn(ui.column):
             self.parent_board.issues.assign_new_labels,
             card.issue,
             self.card.label,
-            self.parent_board.card_labels,
+            self.parent_board.board.card_labels,
         )
         self.parent_board.update_cards()
 
