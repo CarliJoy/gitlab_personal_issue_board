@@ -200,8 +200,8 @@ class LabelColumn(ui.column):
         self, element_id: ElementID, new_place: int, new_list: ElementID
     ) -> None:
         self.refresh_card_by_ui()
-        if self.id != new_list:
-            target = self.parent_board.id2column[new_list]
+        target = self.parent_board.id2column[new_list]
+        if self != target:
             target.refresh_card_by_ui()
             await target.update_gl_issue_state(element_id)
         self.parent_board.update_and_save()
