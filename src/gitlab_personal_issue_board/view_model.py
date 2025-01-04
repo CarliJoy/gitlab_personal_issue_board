@@ -34,9 +34,10 @@ class LabelView(ui.html):
 
 
 class LabelIssueCard(sortable.MoveableCard):
-    def __init__(self, issue: models.Issue) -> None:
+    def __init__(self, issue: models.Issue, parent_board: "LabelBoard") -> None:
         super().__init__()
         self.issue = deepcopy(issue)
+        self.parent_board = parent_board
         self._label_views: dict[models.Label, LabelView] = {}
         self.label_row_elements: tuple[LabelView, ...] = ()
 
@@ -47,7 +48,13 @@ class LabelIssueCard(sortable.MoveableCard):
             self.header = ui.link(issue.title, issue.web_url, new_tab=True)
             self.label_row = ui.row()
             self.update_label_row()
-            self.reference = ui.label(issue.references.full)
+            with ui.row(wrap=False) as row:
+                row.tailwind.align_items("center")
+                self.reference = ui.label(issue.references.full)
+                btn = ui.button(
+                    "", color="green", icon="info", on_click=self.show_details
+                )
+                btn.tailwind.size("1")
 
     def refresh(self, issue: models.Issue) -> None:
         if issue != self.issue:
@@ -94,6 +101,53 @@ class LabelIssueCard(sortable.MoveableCard):
         self.header.props["target"] = self.issue.web_url
         self.update_label_row()
         self.reference.set_text(self.issue.references.full)
+
+    @staticmethod
+    def items_section(name: str, value: str) -> None:
+        ui.label(f"{name}:")
+        ui.label(value).tailwind.font_family("serif")
+
+    def show_details(self) -> None:
+        """Show details for issue"""
+        dialog = self.parent_board.dialog
+        dialog.clear()
+
+        with dialog, ui.card():
+            with ui.row():
+                ui.link(
+                    self.issue.title, target=self.issue.web_url, new_tab=True
+                ).tailwind.font_size("xl").drop_shadow("lg")
+                ui.label(f"[{self.issue.state}]").tailwind.font_size("lg")
+
+            ui.label(
+                f"{self.issue.references.full} (ID: {self.issue.id})"
+            ).tailwind.font_size("sm")
+            with ui.grid(columns=2) as lst:
+                lst.tailwind.space_between("y-0")
+                lst.tailwind.padding("p-0")
+                self.items_section(
+                    "Created at",
+                    f"{self.issue.created_at.astimezone():%Y-%m-%d %H:%M:%S}",
+                )
+                self.items_section(
+                    "Last updated",
+                    f"{self.issue.updated_at.astimezone():%Y-%m-%d %H:%M:%S}",
+                )
+                if self.issue.due_at:
+                    self.items_section(
+                        "Due at", f"{self.issue.due_at.astimezone():%Y-%m-%d %H:%M:%S}"
+                    )
+                self.items_section(
+                    "Assignees",
+                    ", ".join(assignee.username for assignee in self.issue.assignees),
+                )
+            with ui.card() as desc_card:
+                desc_card.tailwind.width("full")
+                desc_card.tailwind.background_color("gray-50")
+                ui.markdown(self.issue.description or "**EMPTY DESCRIPTION**")
+            ui.button("Close", on_click=dialog.close).tailwind.align_self("center")
+
+        dialog.open()
 
 
 class MoveableLabel(ui.row):
@@ -297,7 +351,7 @@ class LabelColumn(ui.column):
             issue_card = self._issue_cards[issue.id]
         except KeyError:
             # Issue card not found create a new on
-            issue_card = LabelIssueCard(issue)
+            issue_card = LabelIssueCard(issue, self.parent_board)
             self._issue_cards[issue.id] = issue_card
             self._card_ids[issue_card.id] = issue_card
         else:
@@ -367,6 +421,7 @@ class LabelBoard(ui.element):
         super().__init__()
         self.board = board
         self.issues = issues
+        self.dialog = ui.dialog()
         self.id2column = {}
 
         with self:
