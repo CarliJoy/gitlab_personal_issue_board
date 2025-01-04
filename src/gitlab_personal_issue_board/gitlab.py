@@ -122,24 +122,36 @@ class Issues:
     def keys(self) -> tuple[IssueID, ...]:
         return self._cache.keys()
 
-    def refresh(self) -> None:
+    def refresh(self) -> str | Literal[True]:
+        """
+        Refresh data from gitlab
+
+        Return True is success else return the error message
+        """
         self._cache.refresh_from_disk()
         start = datetime.now(UTC)
-        if self._last_updated:
-            # we already have some issues inside the cache
-            # so new changed issues could have been unassigned,
-            # so we need to load all changed issues to account for this
-            for issue in self._gl.issues.list(
-                iterator=True,
-                scope="all",
-                updated_after=self._last_updated,
-                with_labels_details=True,
-            ):
-                self._cache.update(issue, remove=not_assigned_to_me)
-        else:
-            for issue in self._gl.issues.list(
-                iterator=True, scope="assigned_to_me", with_labels_details=True
-            ):
-                # we know that the issues are assigned to me, no more checks needd
-                self._cache.update(issue, remove=lambda _: False)
+        try:
+            if self._last_updated:
+                # we already have some issues inside the cache
+                # so new changed issues could have been unassigned,
+                # so we need to load all changed issues to account for this
+                for issue in self._gl.issues.list(
+                    iterator=True,
+                    scope="all",
+                    updated_after=self._last_updated,
+                    with_labels_details=True,
+                ):
+                    self._cache.update(issue, remove=not_assigned_to_me)
+
+            else:
+                for issue in self._gl.issues.list(
+                    iterator=True, scope="assigned_to_me", with_labels_details=True
+                ):
+                    # we know that the issues are assigned to me, no more checks needd
+                    self._cache.update(issue, remove=lambda _: False)
+        except Exception as e:
+            msg = f"Failed to refresh issues: {type(e).__name__}: {e}"
+            logger.warning(msg)
+            return msg
         self._last_updated = start
+        return True
