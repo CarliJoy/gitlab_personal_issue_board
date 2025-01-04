@@ -13,10 +13,12 @@ FAKE_USER: Final = User(
 FAKE_GITLAB: Final = "https://gitlab.fake.example/"
 
 
-def gen_label_data(label: str) -> str | dict[str, str]:
-    if label in {"opened", "closed"}:
-        return label
-    return {"name": label, "text_color": "black", "color": "white"}
+def gen_label_data(label: str | dict[str, str]) -> str | dict[str, str]:
+    if isinstance(label, str):
+        if label in {"opened", "closed"}:
+            return label
+        return {"name": label, "text_color": "black", "color": "white"}
+    return label
 
 
 def gen_label_card_data(
@@ -37,7 +39,7 @@ def gen_label_card(
 def gen_issue(
     issue_id: int,
     title: str = "An Issue",
-    labels: Iterable[str] = (),
+    labels: Iterable[str | dict[str, str]] = (),
     description: str = "Issue Description",
     project: str = "fake/project",
     project_id: int = 123,
@@ -45,7 +47,7 @@ def gen_issue(
     created_at: datetime = datetime(2024, 12, 12, 3, 12, tzinfo=UTC),
     updated_at: datetime = datetime(2024, 12, 12, 4, 15, tzinfo=UTC),
 ) -> Issue:
-    labels = set(labels)
+    labels = list(labels)
     if "opened" in labels:
         closed = False
         labels.remove("opened")

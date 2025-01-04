@@ -2,9 +2,31 @@
 Buisness Logic (Controller) handling sorting Issues into Cards/Boards
 """
 
-from collections.abc import Iterable, Sequence
+import types
+from collections import Counter
+from collections.abc import Iterable, Mapping, Sequence
 
-from .models import Issue, IssueID, LabelCard
+from .models import Issue, IssueID, Label, LabelCard
+
+
+def get_labels_from_issues(issues: Iterable[Issue]) -> Mapping[str, Label]:
+    """
+    Extract Labels from issues
+
+    Returns a Mapping of label name to most occurred label definition.
+    """
+
+    issue_variants: dict[str, Counter[Label]] = {}
+    for issue in issues:
+        for label in issue.labels:
+            issue_variants.setdefault(label.name, Counter()).update((label,))
+
+    return types.MappingProxyType(
+        {
+            label_name: max(counts.keys(), key=counts.get)  # type: ignore[arg-type]
+            for label_name, counts in issue_variants.items()
+        }
+    )
 
 
 def sort_issues_in_cards_by_label(

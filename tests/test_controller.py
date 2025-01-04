@@ -3,8 +3,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from gitlab_personal_issue_board.controller import sort_issues_in_cards_by_label
-from gitlab_personal_issue_board.models import Issue, LabelCard
+from gitlab_personal_issue_board import controller, models
 
 from .conftest import gen_issue, gen_label_card
 
@@ -24,13 +23,13 @@ class CardLabelTestData:
         return self.name
 
     @property
-    def fake_issues(self) -> tuple[Issue, ...]:
+    def fake_issues(self) -> tuple[models.Issue, ...]:
         return tuple(
             gen_issue(issue_id, labels=labels) for issue_id, labels in self.issues
         )
 
     @property
-    def fake_cards(self) -> tuple[LabelCard, ...]:
+    def fake_cards(self) -> tuple[models.LabelCard, ...]:
         return tuple(
             gen_label_card(label)
             if isinstance(label, str)
@@ -39,7 +38,7 @@ class CardLabelTestData:
         )
 
     @property
-    def expected_cards(self) -> tuple[LabelCard, ...]:
+    def expected_cards(self) -> tuple[models.LabelCard, ...]:
         return tuple(
             gen_label_card(label)
             if isinstance(label, str)
@@ -193,7 +192,7 @@ def test_sort_issues_in_cards_by_labels(test_data: CardLabelTestData) -> None:
     cards = test_data.fake_cards
     expected = test_data.expected_cards
 
-    got = tuple(sort_issues_in_cards_by_label(issues, cards))
+    got = tuple(controller.sort_issues_in_cards_by_label(issues, cards))
 
     assert got == expected
 
@@ -205,3 +204,31 @@ def test_sort_issues_in_cards_by_labels(test_data: CardLabelTestData) -> None:
             identical += 1
 
     assert identical == test_data.expected_identical
+
+
+def label(name: str, text_color: str = "black", color: str = "white") -> dict[str, str]:
+    return {"name": name, "text_color": text_color, "color": color}
+
+
+def test_get_labels_from_issues() -> None:
+    """
+    The labels with the most occurrences are selected
+    """
+    issues = [
+        gen_issue(
+            3, labels=(label("foo", "red", "black"), label("bar", "red", "black"))
+        ),
+        gen_issue(1, labels=(label("foo"), label("bar"))),
+        gen_issue(2, labels=(label("foo"), label("bar"))),
+        gen_issue(
+            4, labels=(label("foo", "black", "white"), label("boom", "yellow", "green"))
+        ),
+    ]
+
+    expected = {
+        "foo": models.Label(name="foo", text_color="black", color="white"),
+        "bar": models.Label(name="bar", text_color="black", color="white"),
+        "boom": models.Label(name="boom", text_color="yellow", color="green"),
+    }
+    got = controller.get_labels_from_issues(issues)
+    assert got == expected
