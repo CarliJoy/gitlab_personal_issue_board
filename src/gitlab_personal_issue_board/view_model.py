@@ -2,16 +2,36 @@
 Handling the interaction between Models and UI using our controller
 """
 
+import contextlib
+import functools
 import types
 from collections.abc import Iterable, Mapping
 from copy import deepcopy
 
 from nicegui import run, ui
 
-from . import controller, data, gitlab, models
-from .ui import navigate_to, sortable
+from gitlab_personal_issue_board import controller, data, gitlab, models
+from gitlab_personal_issue_board.ui import navigate_to, sortable
 
 type ElementID = int
+
+
+def html_to_rgb(color: str) -> tuple[int, int, int]:
+    # based on: https://stackoverflow.com/questions/29643352/converting-hex-to-rgb-value-in-python
+    h = color.strip("#")
+    return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore
+
+
+@functools.cache
+def get_background_color(color: str) -> str:
+    # based on https://stackoverflow.com/questions/9780632/how-do-i-determine-if-a-color-is-closer-to-white-or-black
+    if color.startswith("#"):
+        with contextlib.suppress(Exception):
+            r, g, b = html_to_rgb(color)
+            y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            if y < 128:
+                return "white"
+    return "black"
 
 
 class LabelView(ui.html):
@@ -21,7 +41,11 @@ class LabelView(ui.html):
         super().__init__(label.name)
         self.label = label
         self.classes.append("rounded-full")
-        self.tailwind.padding("px-2")
+        self.style["display"] = "inline-flex"
+        self.style["overflow"] = "hidden"
+        self.style["border-color"] = self.label.color
+        self.style["border-width"] = ".2rem"
+        self.tailwind.font_size("sm")
         with self:
             self._tooltip = ui.tooltip(label.description or "")
         self.update_properties()
@@ -29,7 +53,20 @@ class LabelView(ui.html):
     def update_properties(self) -> None:
         self.style["background-color"] = self.label.color
         self.style["color"] = self.label.text_color
-        self.content = self.label.name
+        if "::" in self.label.name:
+            l1, _, l2 = self.label.name.partition("::")
+            background = get_background_color(self.label.text_color)
+            self.style["background-color"] = background
+            self.content = (
+                f"<span style='background-color:{self.label.color};"
+                f"  padding: .125rem .25rem .125rem .25rem'>{l1}</span>"
+                f"<span style='padding: .125rem .5rem .125rem .25rem; "
+                f"  overflow: hidden;display: inline-block;'>{l2}</span>"
+            )
+        else:
+            self.tailwind.padding("px-2")
+            self.tailwind.padding("py-1")
+            self.content = self.label.name
         self._tooltip.text = self.label.description or ""
 
 
@@ -497,3 +534,14 @@ class LabelBoard(ui.element):
         """
         self.board = self.board.evolve(*self.column_cards)
         data.save_label_board(self.board)
+
+
+if __name__ in ("__main__", "__mp_main__"):  # pragma: no cover
+    # just test how labels look like
+    with ui.card():
+        LabelView(
+            models.Label(name="status::waiting", text_color="#000000", color="red")
+        )
+        LabelView(models.Label(name="foobar", text_color="#000000", color="red"))
+
+    ui.run()
