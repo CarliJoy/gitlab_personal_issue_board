@@ -44,7 +44,7 @@ class LabelView(ui.html):
         self.style["display"] = "inline-flex"
         self.style["overflow"] = "hidden"
         self.style["border-color"] = self.label.color
-        self.style["border-width"] = ".2rem"
+        self.style["border-width"] = ".25rem"
         self.tailwind.font_size("sm")
         with self:
             self._tooltip = ui.tooltip(label.description or "")
