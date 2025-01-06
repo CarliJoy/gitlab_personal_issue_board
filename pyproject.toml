@@ -30,6 +30,9 @@ dependencies = [
   "orjson>=3.10.7",
 ]
 
+[project.scripts]
+gl-board = "gitlab_personal_issue_board.ui.main:start_ui"
+
 # https://peps.python.org/pep-0735/
 [dependency-groups]
 lint = ["mypy"]

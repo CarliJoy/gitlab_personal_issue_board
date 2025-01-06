@@ -55,12 +55,12 @@ async def edit_board(board_id: models.LabelBoardID) -> None:
     view_model.BoardConfiguration(board, issues=issues)
 
 
-def start_ui() -> None:
-    ui.run(title="GL Personal Board", show=False, reload=True)
+def start_ui(reload: bool = False) -> None:
+    ui.run(title="GL Personal Board", show=not reload, reload=reload)
 
 
 if __name__ == "__mp_main__":
-    start_ui()
+    start_ui(reload=True)
 
 if __name__ == "__main__":
-    start_ui()
+    start_ui(reload=True)

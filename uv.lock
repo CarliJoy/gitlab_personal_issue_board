@@ -290,7 +290,7 @@ wheels = [
 
 [[package]]
 name = "gitlab-personal-issue-board"
-version = "0.1.dev7+g34a447a.d20241224"
+version = "0.1.dev42+g671d9e7.d20250106"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
