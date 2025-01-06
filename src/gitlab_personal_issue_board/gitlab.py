@@ -11,9 +11,7 @@ from typing import Any, Literal
 
 import gitlab
 
-from . import settings
-from .caching import IssueCacheDict
-from .models import Issue, IssueID, Label, User, UserID
+from gitlab_personal_issue_board import caching, models, settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ def get_gitlab() -> gitlab.Gitlab:
 
 
 @functools.cache
-def get_gitlab_user() -> User:
+def get_gitlab_user() -> models.User:
     gl = get_gitlab()
     try:
         gl.auth()
@@ -35,13 +33,15 @@ def get_gitlab_user() -> User:
             f"Error was: {type(e).__name__}: {e}"
         )
         username = getpass.getuser()
-        return User(username=username, id=UserID(-1), name=username, avatar_url="")
+        return models.User(
+            username=username, id=models.UserID(-1), name=username, avatar_url=""
+        )
     if gl.user is None:
         raise RuntimeError("Could not determine GitLab user")
-    return User.model_validate(gl.user.attributes)
+    return models.User.model_validate(gl.user.attributes)
 
 
-def not_assigned_to_me(issue: Issue) -> bool:
+def not_assigned_to_me(issue: models.Issue) -> bool:
     """
     Return True if the given issue is not assigned to the user holding the connection
     """
@@ -61,7 +61,7 @@ class Issues:
 
     def __init__(self) -> None:
         self._gl = get_gitlab()
-        self._cache = IssueCacheDict()
+        self._cache = caching.IssueCacheDict()
         self._cache.remove(not_assigned_to_me)
         # initialized with the last time the cache was updated
         # currently this is the time the last issues was updated.
@@ -70,9 +70,9 @@ class Issues:
 
     def assign_new_labels(
         self,
-        issue: Issue,
-        new_label: Label | Literal["opened", "closed"],
-        old_labels: Iterable[Label],
+        issue: models.Issue,
+        new_label: models.Label | Literal["opened", "closed"],
+        old_labels: Iterable[models.Label],
     ) -> None:
         """
         Assign *issue* with *new_label* while removing *old_labels*
@@ -86,7 +86,7 @@ class Issues:
         gl_issue = gl_project.issues.get(issue.iid)
         old_label_names = {label.name for label in old_labels}
         new_labels = set(gl_issue.labels) - old_label_names
-        if isinstance(new_label, Label):
+        if isinstance(new_label, models.Label):
             # handle adding a real new label
             new_labels |= {new_label.name}
             if new_label.name not in project_labels:
@@ -110,16 +110,16 @@ class Issues:
         ]
         self._cache.update(new_issue, not_assigned_to_me)
 
-    def __getitem__(self, item: IssueID) -> Issue:
+    def __getitem__(self, item: models.IssueID) -> models.Issue:
         return self._cache[item]
 
     def __len__(self) -> int:
         return len(self._cache)
 
-    def values(self) -> Iterable[Issue]:
+    def values(self) -> Iterable[models.Issue]:
         yield from self._cache.values()
 
-    def keys(self) -> tuple[IssueID, ...]:
+    def keys(self) -> tuple[models.IssueID, ...]:
         return self._cache.keys()
 
     def refresh(self) -> str | Literal[True]:
