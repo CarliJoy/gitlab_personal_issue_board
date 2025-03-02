@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.12"
 
 [[package]]
@@ -290,7 +291,6 @@ wheels = [
 
 [[package]]
 name = "gitlab-personal-issue-board"
-version = "0.1.dev42+g671d9e7.d20250106"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
