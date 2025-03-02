@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/gitlab-personal-issue-board
+      url: https://test.pypi.org/project/gitlab-personal-issue-board/
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing, but
       # should NOT be granted anywhere else!
