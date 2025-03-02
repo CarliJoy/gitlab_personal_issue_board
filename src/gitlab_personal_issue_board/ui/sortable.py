@@ -159,10 +159,10 @@ class SortableExample:
 
         def update_label() -> None:
             c1_label.text = (
-                f"1er: {", ".join(f"'{card}'" for card in c1.cards(MoveableCard))}"
+                f"1er: {', '.join(f"'{card}'" for card in c1.cards(MoveableCard))}"
             )
             c2_label.text = (
-                f"10er: {", ".join(f"'{card}'" for card in c2.cards(MoveableCard))}"
+                f"10er: {', '.join(f"'{card}'" for card in c2.cards(MoveableCard))}"
             )
 
         update_label()

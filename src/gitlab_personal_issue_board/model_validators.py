@@ -39,7 +39,7 @@ def validate_label_cards(
         f"{card} ({count}x)" for card, count in label_counter.items() if count > 1
     )
     if duplicates:
-        raise ValueError(f"There are duplicate cards for {", ".join(duplicates)}")
+        raise ValueError(f"There are duplicate cards for {', '.join(duplicates)}")
     return label_cards
 
 

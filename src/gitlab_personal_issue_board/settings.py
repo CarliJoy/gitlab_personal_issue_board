@@ -34,7 +34,7 @@ class GitlabSettings:
 
 @attrs.frozen
 class Settings:
-    gitlab: GitlabSettings = GitlabSettings()
+    gitlab: GitlabSettings = GitlabSettings()  # noqa: RUF009
 
 
 @functools.cache

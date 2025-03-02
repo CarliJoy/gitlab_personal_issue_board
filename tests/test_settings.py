@@ -21,9 +21,7 @@ def test_load_settings_gitlab_section(
 
     if defined:
         config_file = tmp_path / "config.toml"
-        config_file.write_text(
-            "[gitlab]\n" "config_section = 'my_gitlab_conf_section'\n"
-        )
+        config_file.write_text("[gitlab]\nconfig_section = 'my_gitlab_conf_section'\n")
     settings.load_settings.cache_clear()
 
     result = settings.load_settings()
