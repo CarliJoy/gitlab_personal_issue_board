@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 license = "MIT"
 keywords = []
 authors = [
-  { name = "Carli* Freudenberg", email = "carli.freudenberg@energymeteo.de" },
+  { name = "Carli Freudenberg", email = "carli.freudenberg@energymeteo.de" },
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
