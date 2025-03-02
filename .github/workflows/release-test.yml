@@ -2,10 +2,8 @@ name: Release Package
 
 on:
   push:
-    branches:
-      - main
-#    tags:
-#      - "v*"
+    tags:
+      - "v*"
 
 jobs:
   build-and-inspect-package:
