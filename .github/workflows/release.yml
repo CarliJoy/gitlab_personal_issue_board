@@ -12,15 +12,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: hynek/build-and-inspect-python-package@v2
 
   publish:
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
-      url: https://test.pypi.org/project/gitlab-personal-issue-board/
+      name: pypi
+      url: https://pypi.org/project/gitlab-personal-issue-board/
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing, but
       # should NOT be granted anywhere else!
