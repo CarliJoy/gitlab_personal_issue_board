@@ -50,9 +50,9 @@ dev = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/carlijoy/gitlab-personal-issue-board#readme"
-Issues = "https://github.com/carlijoy/gitlab-personal-issue-board/issues"
-Source = "https://github.com/carlijoy/gitlab-personal-issue-board"
+Documentation = "https://github.com/CarliJoy/gitlab_personal_issue_board/#readme"
+Issues = "https://github.com/CarliJoy/gitlab_personal_issue_board/issues"
+Source = "https://github.com/CarliJoy/gitlab_personal_issue_board/"
 
 [tool.hatch.envs.default]
 installer = "uv"
