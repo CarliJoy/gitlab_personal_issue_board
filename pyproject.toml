@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "gitlab-personal-issue-board"
 dynamic = ["version"]
-description = ''
+description = 'Manage gitlab issues assigned to yourself locally for all groups and projects'
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
