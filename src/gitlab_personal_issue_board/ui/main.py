@@ -1,3 +1,4 @@
+import click
 from nicegui import run, ui
 
 from gitlab_personal_issue_board import data, gitlab, models, view_model
@@ -55,12 +56,31 @@ async def edit_board(board_id: models.LabelBoardID) -> None:
     view_model.BoardConfiguration(board, issues=issues)
 
 
-def start_ui(reload: bool = False) -> None:
-    ui.run(title="GL Personal Board", show=not reload, reload=reload)
+@click.command()
+@click.option(
+    "--reload",
+    help="Reload UI in case source file changes (for development)",
+    is_flag=True,
+)
+@click.option(
+    "--show/--background",
+    help="Open in browser or start UI in background",
+    is_flag=True,
+    default=True,
+    show_default=True,
+)
+def start_ui(reload: bool, show: bool) -> None:
+    """
+    Start board web view containing all personal gitlab issues.
+
+    The gitlab access needs to be configured as described here:
+    https://python-gitlab.readthedocs.io/en/stable/cli-usage.html#configuration-file-format
+    """
+    ui.run(title="GL Personal Board", show=show, reload=reload)
 
 
 if __name__ == "__mp_main__":
-    start_ui(reload=True)
+    start_ui()
 
 if __name__ == "__main__":
-    start_ui(reload=True)
+    start_ui()

@@ -293,6 +293,7 @@ name = "gitlab-personal-issue-board"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
+    { name = "click" },
     { name = "nicegui" },
     { name = "orjson" },
     { name = "platformdirs" },
@@ -322,6 +323,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "attrs", specifier = ">=24.3.0" },
+    { name = "click", specifier = ">=8.1.8" },
     { name = "nicegui", specifier = ">=2.9.0" },
     { name = "orjson", specifier = ">=3.10.7" },
     { name = "platformdirs", specifier = ">=4.3.6" },
