@@ -1,3 +1,5 @@
+from typing import TypeVar
+
 import click
 from nicegui import run, ui
 
@@ -56,7 +58,33 @@ async def edit_board(board_id: models.LabelBoardID) -> None:
     view_model.BoardConfiguration(board, issues=issues)
 
 
-@click.command()
+T = TypeVar("T", bound=click.Command)
+
+
+def no_wrap_help(command: T) -> T:
+    """Decorator to disable wrapping in help text for a click.Command."""
+
+    class NoWrapFormatter(click.HelpFormatter):
+        def write_text(self, text: str) -> None:
+            if text:
+                self.write_paragraph()
+                self.write(text)
+                self.write_paragraph()
+
+    class NoWrapContext(click.Context):
+        def make_formatter(self) -> click.HelpFormatter:
+            return NoWrapFormatter(width=1000)
+
+    # Patch the command's context class
+    command.context_class = NoWrapContext
+    return command
+
+
+@no_wrap_help
+@click.command(
+    epilog="The gitlab access needs to be configured as described here:\n"
+    "https://python-gitlab.readthedocs.io/en/stable/cli-usage.html#configuration-file-format"
+)
 @click.option(
     "--reload",
     help="Reload UI in case source file changes (for development)",
@@ -72,9 +100,6 @@ async def edit_board(board_id: models.LabelBoardID) -> None:
 def start_ui(reload: bool, show: bool) -> None:
     """
     Start board web view containing all personal gitlab issues.
-
-    The gitlab access needs to be configured as described here:
-    https://python-gitlab.readthedocs.io/en/stable/cli-usage.html#configuration-file-format
     """
     ui.run(title="GL Personal Board", show=show, reload=reload)
 
