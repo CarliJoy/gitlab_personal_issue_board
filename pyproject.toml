@@ -21,14 +21,14 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "attrs>=24.3.0",
+  "attrs>=25.3.0",
+  "click>=8.2.1",
+  "nicegui>=2.19.0",
+  "orjson>=3.10.18",
+  "platformdirs>=4.3.8",
+  "pydantic>=2.11.5",
+  "python-gitlab>=5.6.0",
   "typed-settings>=24.6.0",
-  "nicegui>=2.9.0",
-  "python-gitlab>=5.2.0",
-  "pydantic>=2.9.2",
-  "platformdirs>=4.3.6",
-  "orjson>=3.10.7",
-  "click>=8.1.8",
 ]
 
 [project.scripts]
