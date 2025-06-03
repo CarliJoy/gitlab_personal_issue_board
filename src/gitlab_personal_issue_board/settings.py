@@ -37,9 +37,13 @@ class Settings:
     gitlab: GitlabSettings = GitlabSettings()  # noqa: RUF009
 
 
+def get_config_file() -> Path:
+    return Path(platformdirs.user_config_dir(APP_NAME)) / "config.toml"
+
+
 @functools.cache
 def load_settings() -> Settings:
-    config_file = Path(platformdirs.user_config_dir(APP_NAME)) / "config.toml"
+    config_file = get_config_file()
     return ts.load_settings(
         cls=Settings,
         loaders=(
@@ -49,3 +53,19 @@ def load_settings() -> Settings:
             ),
         ),
     )
+
+
+def debug_settings() -> None:
+    """
+    Print settings and paths
+    """
+    config = get_config_file()
+    settings = load_settings()
+    if not config.is_file():
+        print(f"Settings file '{config}' does not exist, ignoring.")
+    else:
+        print(f"Settings loaded from '{config}'.")
+    if settings.gitlab.config_section:
+        print(f"Using python gitlab config section {settings.gitlab.config_section}")
+    print(f"Data is saved in '{data_dir()}'")
+    print(f"Cache files are stored in '{cache_dir()}'")

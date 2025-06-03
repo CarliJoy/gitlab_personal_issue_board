@@ -3,7 +3,7 @@ from typing import TypeVar
 import click
 from nicegui import run, ui
 
-from gitlab_personal_issue_board import data, gitlab, models, view_model
+from gitlab_personal_issue_board import data, gitlab, models, settings, view_model
 from gitlab_personal_issue_board.ui import navigate_to
 
 
@@ -101,6 +101,7 @@ def start_ui(reload: bool, show: bool) -> None:
     """
     Start board web view containing all personal gitlab issues.
     """
+    settings.debug_settings()
     ui.run(title="GL Personal Board", show=show, reload=reload)
 
 
