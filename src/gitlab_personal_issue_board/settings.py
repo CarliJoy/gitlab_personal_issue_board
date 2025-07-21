@@ -34,7 +34,7 @@ class GitlabSettings:
 
 @attrs.frozen
 class Settings:
-    gitlab: GitlabSettings = GitlabSettings()  # noqa: RUF009
+    gitlab: GitlabSettings = GitlabSettings()
 
 
 def get_config_file() -> Path:
