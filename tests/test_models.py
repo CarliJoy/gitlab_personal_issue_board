@@ -26,7 +26,7 @@ def test_label_board_multiple_labels() -> None:
         ],
     }
 
-    with pytest.raises(ValidationError, match=".*duplicate.*label_fabel.*3x.*") as e:
+    with pytest.raises(ValidationError, match=r".*duplicate.*label_fabel.*3x.*") as e:
         LabelBoard.model_validate(data)
 
     print(e.value)
@@ -45,7 +45,7 @@ def test_label_board_closed_must_last() -> None:
         ],
     }
 
-    with pytest.raises(ValidationError, match=".*closed.*only.*last.*") as e:
+    with pytest.raises(ValidationError, match=r".*closed.*only.*last.*") as e:
         LabelBoard.model_validate(data)
 
     print(e.value)
@@ -64,7 +64,7 @@ def test_label_board_closed_must_first() -> None:
         ],
     }
 
-    with pytest.raises(ValidationError, match=".*opened.*only.*first.*") as e:
+    with pytest.raises(ValidationError, match=r".*opened.*only.*first.*") as e:
         LabelBoard.model_validate(data)
 
     print(e.value)
