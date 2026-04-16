@@ -1,5 +1,3 @@
-from typing import TypeVar
-
 import click
 from nicegui import run, ui
 
@@ -58,10 +56,7 @@ async def edit_board(board_id: models.LabelBoardID) -> None:
     view_model.BoardConfiguration(board, issues=issues)
 
 
-T = TypeVar("T", bound=click.Command)
-
-
-def no_wrap_help(command: T) -> T:
+def no_wrap_help[T: click.Command](command: T) -> T:
     """Decorator to disable wrapping in help text for a click.Command."""
 
     class NoWrapFormatter(click.HelpFormatter):
